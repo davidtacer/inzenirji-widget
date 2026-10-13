@@ -55,12 +55,15 @@ Conversation with the owner in Slovenian; code and docs in English.
 3. **Branch protection on `dev` and `main`** (recommended): require the `CI` check to pass before merge.
 4. Optional: decide whether the repo should be private (it holds no secrets, but it is product code).
 
+## Template requirements
+- `/uredi` page boilerplate for client sites: `docs/template/uredi-page.md` (ADR-011). Move to the template repo when it exists.
+
 ## Parked ideas
 - npm wrapper package around the embed script (ADR-002) if a non-template site ever needs it.
 
 ## Next
 TASK-005 (GitHub content adapter: GitHub App, read/write `content/` on `dev`, merge, revert) — needs a
-GitHub App from the owner and a test client repo; or the site template (phase 0) first. Latest TASK: 010 (004 split a/b) · latest ADR: 010.
+GitHub App from the owner and a test client repo; or the site template (phase 0) first. Latest TASK: 010 (004 split a/b) · latest ADR: 011.
 
 ## Open items
 - Conversation retention proposed 12 months (owner to confirm); site "notes" + recent-change summary go into TASK-006.
