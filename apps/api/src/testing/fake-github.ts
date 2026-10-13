@@ -92,11 +92,13 @@ export class FakeGitHub {
     const ref = url.searchParams.get("ref");
 
     let m: RegExpMatchArray | null;
-    if (method === "GET" && (m = path.match(/^\/git\/ref\/heads\/(.+)$/))) {
+    m = method === "GET" ? path.match(/^\/git\/ref\/heads\/(.+)$/) : null;
+    if (m) {
       const sha = this.refs.get(m[1] as string);
       return sha ? this.json(200, { object: { sha } }) : this.json(404);
     }
-    if (method === "PATCH" && (m = path.match(/^\/git\/refs\/heads\/(.+)$/))) {
+    m = method === "PATCH" ? path.match(/^\/git\/refs\/heads\/(.+)$/) : null;
+    if (m) {
       const branch = m[1] as string;
       const current = this.refs.get(branch);
       if (!current) return this.json(404);
@@ -105,7 +107,8 @@ export class FakeGitHub {
       this.refs.set(branch, body.sha);
       return this.json(200, { object: { sha: body.sha } });
     }
-    if (method === "GET" && (m = path.match(/^\/git\/commits\/(\w+)$/))) {
+    m = method === "GET" ? path.match(/^\/git\/commits\/(\w+)$/) : null;
+    if (m) {
       const c = this.commits.get(m[1] as string);
       return c
         ? this.json(200, {
@@ -132,7 +135,8 @@ export class FakeGitHub {
       this.commits.set(sha, { tree: body.tree, parents: body.parents, message: body.message });
       return this.json(201, { sha });
     }
-    if (method === "GET" && (m = path.match(/^\/contents\/(.+)$/)) && ref) {
+    m = method === "GET" ? path.match(/^\/contents\/(.+)$/) : null;
+    if (m && ref) {
       const files = this.filesAt(ref);
       const p = m[1] as string;
       if (p in files) {
@@ -165,7 +169,8 @@ export class FakeGitHub {
       this.refs.set(body.base, sha);
       return this.json(201, { sha });
     }
-    if (method === "GET" && (m = path.match(/^\/compare\/(\w+)\.\.\.(\w+)$/))) {
+    m = method === "GET" ? path.match(/^\/compare\/(\w+)\.\.\.(\w+)$/) : null;
+    if (m) {
       const [a, b] = [m[1] as string, m[2] as string];
       const mb = this.mergeBase(a, b);
       const M = mb ? this.filesAt(mb) : {};
