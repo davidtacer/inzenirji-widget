@@ -1,6 +1,6 @@
 # Embed script — `packages/embed`
 
-Status: **Built** (not deployed; ADR-006 open).
+Status: **Live** on dev (`https://uredi-dev.inzenirji.si/embed.js`); login handoff Built (TASK-004b).
 
 ## What it does
 The client site's `/uredi` page loads one classic script:
@@ -17,6 +17,10 @@ On load (`src/index.ts` → `mount()` in `src/embed.ts`) it:
    `event.source` is that window, `event.origin` equals the editor origin, and the data parses as a
    protocol message (`parseWidgetToEmbed`). `widget:close` → `history.back()`, or `location.assign("/")`
    when there is no history.
+6. Login link (TASK-004b): if the page URL has `#login=<43-char token>` (on load or on `hashchange`, e.g. a
+   link pasted into a tab that already shows /uredi), the hash is removed at once with
+   `history.replaceState` (path and query kept) and the token is posted to the iframe as `embed:login` —
+   only after the widget has sent `widget:ready`, only to the editor origin, and only once.
 
 ## Protocol (`packages/shared/src/embed-protocol.ts`)
 Version `1`. Messages are exactly `{ v: 1, type }`; extra keys, other versions or unknown types are dropped.
@@ -24,12 +28,13 @@ Version `1`. Messages are exactly `{ v: 1, type }`; extra keys, other versions o
 |---|---|---|
 | widget → embed | `widget:ready` | widget rendered for a valid site |
 | widget → embed | `widget:close` | user pressed "Zapri" |
+| embed → widget | `embed:login` (`{ v, type, token }`) | one-time login token from the e-mail link |
 
 The shared protocol file is dependency-free on purpose: the embed bundles it.
 
 ## Size budget
 ≤ 3072 B gzipped (ADR-002), enforced by `pnpm size` in CI (`scripts/check-size.mjs`).
-Current: 969 B gzipped (2026-10-13).
+Current: 1164 B gzipped (2026-10-13, TASK-004b).
 
 ## Build and serve
 `vite build` produces `dist/embed.js` (IIFE). The widget build copies it to its own `dist/embed.js`,

@@ -28,12 +28,12 @@ their-site.si/uredi  (static page from the template)
   versioned message schema in `packages/shared`.
 - Widget and API share an origin, so the API needs no CORS for the widget.
 
-## Auth across the iframe (ADR-008, ADR-010 — API Built, UI Planned)
+## Auth across the iframe (ADR-008, ADR-010 — Built)
 Third-party cookies in iframes are blocked or partitioned by browsers, so no cookies are used:
 1. Magic link points to `their-site.si/uredi#login=<one-time token>` (first-party page, fragment never sent to servers).
-2. Embed script reads the fragment, removes it from the URL and posts it to the iframe (TASK-004b).
+2. Embed script reads the fragment, removes it from the URL and posts it to the iframe after `widget:ready`.
 3. Widget exchanges it at `POST /api/auth/exchange` for a 30-day session token, kept in the iframe's
-   (partitioned) storage; sent as `Authorization: Bearer` (TASK-004b).
+   (partitioned) storage; sent as `Authorization: Bearer`.
 4. Every API call checks that the session belongs to the requested site (never trust `siteId` from the client alone).
 
 ## Data
