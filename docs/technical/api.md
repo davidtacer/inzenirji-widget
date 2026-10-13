@@ -1,6 +1,6 @@
 # API — `apps/api`
 
-Status: health **Live** on dev; auth **Built** (TASK-004a; live after merge + deploy).
+Status: **Live** on dev (health + auth; owner tested login/logout with real SMTP mail on 2026-10-13).
 
 ## Structure
 - `src/worker.ts` — Cloudflare Worker entry. Builds the app per request from the Worker env: D1 binding `DB`,

@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-13 23:20 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-13 23:30 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -36,7 +36,8 @@ Conversation with the owner in Slovenian; code and docs in English.
 - 2026-10-13: owner set Worker secret `SMTP_PASSWORD`, created D1 `inzenirji-editor-dev`
   (0cbe9b52-ff01-40d8-a348-cb54b05def54); PR #3 merged.
 - 2026-10-13: TASK-004a (auth API) merged (PR #4, 2bb978c). Proof in `docs/tasks/TASK-004a.feedback.md`.
-- 2026-10-13: TASK-004b (login UI) on `feat/TASK-004b-auth-ui` — PR open. Browser proof in `TASK-004b.feedback.md`.
+- 2026-10-13: TASK-004b (login UI) merged (PR #5); `/uredi` boilerplate docs (PR #6, ADR-011).
+  **Auth Live on dev** — owner tested login + logout with a real e-mail (23:24).
 - 2026-10-13: TASK-002 merged (PR #2, 6c28f06). First Deploy dev run failed: `CLOUDFLARE_API_TOKEN` empty
   (owner had entered the secrets wrongly). Owner fixed the secrets and re-ran Deploy dev → green; owner confirmed
   https://uredi-dev.inzenirji.si/api/health works (22:38). **Live on dev.** PR #3 adds a clear secret pre-check.
@@ -45,12 +46,7 @@ Conversation with the owner in Slovenian; code and docs in English.
   Branch `docs/foundation` is contained in PR #1 and can be deleted.
 
 ## Owner's open actions
-0. Merge the TASK-004b PR when `CI` is green, check "Deploy dev" is green, then try the login on dev
-   (see the chat for the test page). PR #4 (004a) was merged; its deploy result is not visible to the agent.
-0b. Add yourself as a test user on dev (runbook `docs/runbooks/add-site-user.md`, site e.g. `demo-site` with
-   origin of the test page) — needed to try login once TASK-004b ships.
-0c. SPF for `inzenirji.si` is `v=spf1 +a +mx ~all`: login mails only pass SPF if `mail.datavallis.com` sends from an
-   IP of the `inzenirji.si` MX/A records. Safer: `v=spf1 +a +mx a:mail.datavallis.com ~all`. Check DKIM too.
+0. Done 2026-10-13: owner tested login/logout on dev via https://inzenirji.si/uredi (site `demo-site`).
 1. Delete branch `docs/foundation` (contained in PR #1).
 3. **Branch protection on `dev` and `main`** (recommended): require the `CI` check to pass before merge.
 4. Optional: decide whether the repo should be private (it holds no secrets, but it is product code).

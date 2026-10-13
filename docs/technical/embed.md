@@ -1,6 +1,6 @@
 # Embed script — `packages/embed`
 
-Status: **Live** on dev (`https://uredi-dev.inzenirji.si/embed.js`); login handoff Built (TASK-004b).
+Status: **Live** on dev (`https://uredi-dev.inzenirji.si/embed.js`); login handoff Live on dev.
 
 ## What it does
 The client site's `/uredi` page loads one classic script:
