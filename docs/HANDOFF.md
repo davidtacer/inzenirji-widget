@@ -25,7 +25,7 @@ Conversation with the owner in Slovenian; code and docs in English.
 3. `pnpm lint && pnpm typecheck && pnpm test` — must pass before starting a task.
 
 ## Repo / environments
-- Repo: davidtacer/inzenirji-widget. No deployed environment yet (ADR-006 open).
+- Repo: davidtacer/inzenirji-widget. No deployed environment yet. Hosting: Cloudflare (ADR-009).
 
 ## Done
 - 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it).
@@ -38,7 +38,8 @@ Conversation with the owner in Slovenian; code and docs in English.
    https://github.com/davidtacer/inzenirji-widget/pull/1 — then delete branch `docs/foundation`.
 1. **Set default branch to `dev`**: https://github.com/davidtacer/inzenirji-widget/settings → General →
    Default branch → `dev`.
-2. **Hosting decision (ADR-006)**: Cloudflare or Hetzner — blocks TASK-002 (dev deploy) and TASK-008.
+2. **Cloudflare access for CI (TASK-002)**: create API token (template "Edit Cloudflare Workers", account +
+   zone `inzenirji.si`) and add GitHub Actions secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 3. **Branch protection on `dev` and `main`** (recommended): require the `CI` check to pass before merge.
 4. Optional: decide whether the repo should be private (it holds no secrets, but it is product code).
 
@@ -47,7 +48,7 @@ Conversation with the owner in Slovenian; code and docs in English.
 
 ## Next
 After TASK-001 is merged: TASK-003 (embed ↔ widget protocol hardening) and TASK-005 (GitHub content adapter)
-can start; TASK-002 waits for ADR-006. Latest TASK: 010 · latest ADR: 008.
+can start; TASK-002 (dev deploy on Cloudflare) waits for the owner's Cloudflare token. Latest TASK: 010 · latest ADR: 009.
 
 ## Open items
 - ADR-007 (schema location) to be decided with phase 0 (site template).
