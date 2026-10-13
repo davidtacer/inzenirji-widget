@@ -1,0 +1,75 @@
+name: Deploy dev
+
+# Deploys widget + API to https://uredi-dev.inzenirji.si after CI succeeds on a push to `dev`.
+# Production is never deployed from here (ADR-009, DEVELOPMENT-RULES §9).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy dev
+    # Only after a green CI run for a push to dev, or a manual run on dev.
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'dev') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      DEV_URL: https://uredi-dev.inzenirji.si
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build widget and embed
+        run: pnpm build
+
+      - name: Deploy Worker (env dev)
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler deploy --env dev --var "GIT_SHA:${DEPLOY_SHA}"
+
+      - name: Smoke test
+        run: |
+          set -u
+          # A new custom domain can take a few minutes to get its certificate.
+          for i in $(seq 1 30); do
+            body=$(curl -fsS "$DEV_URL/api/health" 2>/dev/null || true)
+            if [ "$body" = "{\"status\":\"ok\",\"version\":\"$DEPLOY_SHA\"}" ]; then
+              echo "health OK: $body"; break
+            fi
+            echo "attempt $i: '${body}' — waiting"; sleep 10
+            if [ "$i" = 30 ]; then echo "FAIL: health never reported $DEPLOY_SHA"; exit 1; fi
+          done
+          curl -fsS -o /dev/null -w "index %{http_code}\n" "$DEV_URL/"
+          curl -fsS -o /dev/null -w "embed %{http_code} %{content_type}\n" "$DEV_URL/embed.js"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$DEV_URL/api/does-not-exist")
+          [ "$code" = 404 ] || { echo "FAIL: unknown API route returned $code"; exit 1; }
+          echo "unknown api route 404 OK"

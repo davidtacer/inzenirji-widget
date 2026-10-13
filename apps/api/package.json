@@ -7,7 +7,9 @@
     "dev": "tsx watch src/node.ts",
     "start": "tsx src/node.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy:dev": "wrangler deploy --env dev",
+    "worker:dry-run": "wrangler deploy --env dev --dry-run --outdir dist-worker"
   },
   "dependencies": {
     "@hono/node-server": "2.1.5",
@@ -15,6 +17,7 @@
     "hono": "4.13.13"
   },
   "devDependencies": {
-    "tsx": "4.23.15"
+    "tsx": "4.23.15",
+    "wrangler": "4.150.0"
   }
 }

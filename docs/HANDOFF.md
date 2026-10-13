@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-13 21:50 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-13 22:30 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -25,20 +25,20 @@ Conversation with the owner in Slovenian; code and docs in English.
 3. `pnpm lint && pnpm typecheck && pnpm test` — must pass before starting a task.
 
 ## Repo / environments
-- Repo: davidtacer/inzenirji-widget. No deployed environment yet (ADR-006 open).
+- Repo: davidtacer/inzenirji-widget. Hosting: Cloudflare (ADR-009). dev: https://uredi-dev.inzenirji.si (after TASK-002 merge).
 
 ## Done
-- 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it).
+- 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it). Default branch `dev` (owner).
+- 2026-10-13: owner merged PR #1 (merge commit a05850e); set Cloudflare secrets for Actions.
+- 2026-10-13: TASK-002 branch `feat/TASK-002-dev-deploy` — Worker + deploy workflow; PR open.
 - 2026-10-13: PR #1 `feat/TASK-001-scaffold` → `dev` (includes the docs foundation commit): monorepo, embed,
   widget shell, API health, CI. CI green (run 38457710002, ~20 s). Proof in `docs/tasks/TASK-001.feedback.md`.
   Branch `docs/foundation` is contained in PR #1 and can be deleted.
 
 ## Owner's open actions
-0. **Merge PR #1 into `dev`** (squash) when its `CI` check is green:
-   https://github.com/davidtacer/inzenirji-widget/pull/1 — then delete branch `docs/foundation`.
-1. **Set default branch to `dev`**: https://github.com/davidtacer/inzenirji-widget/settings → General →
-   Default branch → `dev`.
-2. **Hosting decision (ADR-006)**: Cloudflare or Hetzner — blocks TASK-002 (dev deploy) and TASK-008.
+0. **Merge the TASK-002 PR into `dev`** when `CI` is green, then check the "Deploy dev" run in Actions and
+   open https://uredi-dev.inzenirji.si/api/health — expect `"status":"ok"` and the merge commit SHA.
+1. Delete branch `docs/foundation` (contained in PR #1).
 3. **Branch protection on `dev` and `main`** (recommended): require the `CI` check to pass before merge.
 4. Optional: decide whether the repo should be private (it holds no secrets, but it is product code).
 
@@ -46,8 +46,8 @@ Conversation with the owner in Slovenian; code and docs in English.
 - npm wrapper package around the embed script (ADR-002) if a non-template site ever needs it.
 
 ## Next
-After TASK-001 is merged: TASK-003 (embed ↔ widget protocol hardening) and TASK-005 (GitHub content adapter)
-can start; TASK-002 waits for ADR-006. Latest TASK: 010 · latest ADR: 008.
+After TASK-002 is live on dev: TASK-004 (auth, magic link) — owner asked how /uredi is protected —
+then TASK-005 (GitHub content adapter). Latest TASK: 010 · latest ADR: 009.
 
 ## Open items
 - ADR-007 (schema location) to be decided with phase 0 (site template).
