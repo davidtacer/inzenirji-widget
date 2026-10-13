@@ -3,7 +3,7 @@
 | Task | Title | Depends on | Status |
 |---|---|---|---|
 | TASK-001 | Monorepo scaffold, tooling and CI | — | Done (PR #1, merged 2026-10-13) |
-| TASK-002 | Deploy skeleton to dev environment (Cloudflare Worker, `uredi-dev.inzenirji.si`) | 001, ADR-009 | Built — PR open |
+| TASK-002 | Deploy skeleton to dev environment (Cloudflare Worker, `uredi-dev.inzenirji.si`) | 001, ADR-009 | Done — Live on dev (PR #2) |
 | TASK-003 | Embed ↔ widget postMessage protocol (versioned, origin-checked) | 001 | Planned |
 | TASK-004 | Auth: magic link + token exchange (ADR-008) | 003 | Planned |
 | TASK-005 | Content adapter: read/write client repo via GitHub App (`content/` only), commit to `dev`, merge, revert | 001 | Planned |

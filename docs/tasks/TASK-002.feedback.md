@@ -1,6 +1,6 @@
 # TASK-002 feedback
-Status: PARTIAL — built and proven locally; the first real deploy runs after this PR is merged into `dev`
-(the deploy workflow only runs from `dev`). Result is recorded in HANDOFF afterwards.
+Status: DONE — Live on dev. First run failed on wrongly entered secrets; after the owner fixed them the manual
+re-run of Deploy dev was green (smoke step checks the exact SHA) and the owner confirmed /api/health (2026-10-13 22:38).
 
 ## What I implemented
 Worker entry, `wrangler.jsonc` (env `dev` only, custom domain, no workers.dev/preview URLs), deploy workflow

@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-13 22:30 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-13 22:40 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -25,20 +25,22 @@ Conversation with the owner in Slovenian; code and docs in English.
 3. `pnpm lint && pnpm typecheck && pnpm test` — must pass before starting a task.
 
 ## Repo / environments
-- Repo: davidtacer/inzenirji-widget. Hosting: Cloudflare (ADR-009). dev: https://uredi-dev.inzenirji.si (after TASK-002 merge).
+- Repo: davidtacer/inzenirji-widget. Hosting: Cloudflare (ADR-009). dev: https://uredi-dev.inzenirji.si — Live.
+- The agent's cloud session cannot reach `uredi-dev.inzenirji.si` (session egress proxy answers 403). Proof of a
+  deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
 - 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it). Default branch `dev` (owner).
 - 2026-10-13: owner merged PR #1 (merge commit a05850e); set Cloudflare secrets for Actions.
-- 2026-10-13: TASK-002 merged (PR #2, 6c28f06). First Deploy dev run failed: `CLOUDFLARE_API_TOKEN` empty in the
-  workflow (secret not found as a repository Actions secret). Owner to fix the secret; fix PR adds a clear pre-check.
+- 2026-10-13: TASK-002 merged (PR #2, 6c28f06). First Deploy dev run failed: `CLOUDFLARE_API_TOKEN` empty
+  (owner had entered the secrets wrongly). Owner fixed the secrets and re-ran Deploy dev → green; owner confirmed
+  https://uredi-dev.inzenirji.si/api/health works (22:38). **Live on dev.** PR #3 adds a clear secret pre-check.
 - 2026-10-13: PR #1 `feat/TASK-001-scaffold` → `dev` (includes the docs foundation commit): monorepo, embed,
   widget shell, API health, CI. CI green (run 38457710002, ~20 s). Proof in `docs/tasks/TASK-001.feedback.md`.
   Branch `docs/foundation` is contained in PR #1 and can be deleted.
 
 ## Owner's open actions
-0. **Merge the TASK-002 PR into `dev`** when `CI` is green, then check the "Deploy dev" run in Actions and
-   open https://uredi-dev.inzenirji.si/api/health — expect `"status":"ok"` and the merge commit SHA.
+0. Merge PR #3 (deploy secret pre-check) when `CI` is green.
 1. Delete branch `docs/foundation` (contained in PR #1).
 3. **Branch protection on `dev` and `main`** (recommended): require the `CI` check to pass before merge.
 4. Optional: decide whether the repo should be private (it holds no secrets, but it is product code).

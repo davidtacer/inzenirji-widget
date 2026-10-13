@@ -1,6 +1,6 @@
 # Deploy (Cloudflare)
 
-Status: **Built** (dev). Production: Planned (owner decision).
+Status: **Live** on dev since 2026-10-13. Production: Planned (owner decision).
 
 ## Shape
 One Worker per environment serves everything on one origin:
