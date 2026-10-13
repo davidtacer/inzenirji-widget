@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-13 21:45 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-13 21:50 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -13,6 +13,11 @@ Conversation with the owner in Slovenian; code and docs in English.
 - Merge (squash): `gh api -X PUT repos/davidtacer/inzenirji-widget/pulls/<n>/merge -f merge_method=squash`
 - Checks: `gh api repos/davidtacer/inzenirji-widget/commits/<sha>/check-runs`
 - Repo is **public**: double-check every commit for secrets.
+- **Merging is blocked for the agent in the 2026-10-13 session** (the session's permission layer denied
+  "merge without review"; listing PRs was denied too). Until the owner changes that, the agent pushes branches
+  and opens PRs, the owner merges. Do not try to work around it.
+- Killing dev servers: never `pkill -f vite` / `pgrep -f node.ts` from the agent shell (matches the shell
+  itself); find PIDs with `ps aux | grep "[n]ode.ts"` and `kill <pid>`.
 
 ## Bootstrap a fresh session
 1. Clone, `git checkout dev && git pull`.
@@ -23,9 +28,14 @@ Conversation with the owner in Slovenian; code and docs in English.
 - Repo: davidtacer/inzenirji-widget. No deployed environment yet (ADR-006 open).
 
 ## Done
-- 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it); docs foundation.
+- 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it).
+- 2026-10-13: branch `docs/foundation` (docs, ADR-001…008) — pushed, PR to `dev` to be merged by owner.
+- 2026-10-13: branch `feat/TASK-001-scaffold` (stacked on `docs/foundation`) — monorepo, embed, widget shell,
+  API health, CI. Local proof in `docs/tasks/TASK-001.feedback.md`. Merge after `docs/foundation`.
 
 ## Owner's open actions
+0. **Merge the two PRs into `dev`, in order:** `docs/foundation`, then `feat/TASK-001-scaffold`
+   (links in the chat). Merge the second only if its `CI` check is green.
 1. **Set default branch to `dev`**: https://github.com/davidtacer/inzenirji-widget/settings → General →
    Default branch → `dev`.
 2. **Hosting decision (ADR-006)**: Cloudflare or Hetzner — blocks TASK-002 (dev deploy) and TASK-008.
@@ -36,7 +46,8 @@ Conversation with the owner in Slovenian; code and docs in English.
 - npm wrapper package around the embed script (ADR-002) if a non-template site ever needs it.
 
 ## Next
-TASK-001 (`docs/tasks/TASK-001-scaffold.md`). Latest TASK: 010 · latest ADR: 008.
+After TASK-001 is merged: TASK-003 (embed ↔ widget protocol hardening) and TASK-005 (GitHub content adapter)
+can start; TASK-002 waits for ADR-006. Latest TASK: 010 · latest ADR: 008.
 
 ## Open items
 - ADR-007 (schema location) to be decided with phase 0 (site template).

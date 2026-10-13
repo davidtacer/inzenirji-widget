@@ -2,7 +2,7 @@
 
 | Doc | Covers code | Status |
 |---|---|---|
-| `embed.md` | `packages/embed`, embed parts of `packages/shared` | Planned (TASK-001) |
-| `widget.md` | `apps/widget` | Planned (TASK-001) |
-| `api.md` | `apps/api` | Planned (TASK-001) |
-| `tooling.md` | root config, CI | Planned (TASK-001) |
+| `embed.md` | `packages/embed`, `packages/shared/src/embed-protocol.ts`, `site-id.ts` | Built |
+| `widget.md` | `apps/widget` | Built |
+| `api.md` | `apps/api`, `packages/shared/src/api.ts` | Built |
+| `tooling.md` | root config, `.github/workflows` | Built |

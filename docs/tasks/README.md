@@ -2,7 +2,7 @@
 
 | Task | Title | Depends on | Status |
 |---|---|---|---|
-| TASK-001 | Monorepo scaffold, tooling and CI | — | In progress |
+| TASK-001 | Monorepo scaffold, tooling and CI | — | Built — PR open, awaiting CI + merge |
 | TASK-002 | Deploy skeleton to dev environment | 001, ADR-006 | Blocked (hosting decision) |
 | TASK-003 | Embed ↔ widget postMessage protocol (versioned, origin-checked) | 001 | Planned |
 | TASK-004 | Auth: magic link + token exchange (ADR-008) | 003 | Planned |
