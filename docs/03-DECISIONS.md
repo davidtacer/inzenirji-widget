@@ -1,0 +1,14 @@
+# Decisions (ADR log, append-only)
+
+Newest decision wins. Never delete a row; supersede it.
+
+| ADR | Date | Status | Decision | Why / trade-offs |
+|---|---|---|---|---|
+| ADR-001 | 2026-10-13 | Accepted | One pnpm monorepo: `apps/widget`, `apps/api`, `packages/embed`, `packages/shared`. | Owner choice. Widget, API and embed change together (message contracts); one PR can keep them consistent. |
+| ADR-002 | 2026-10-13 | Accepted | The editor is delivered as a script + iframe served from our domain, not as an npm package in the site template. The template's `/uredi` page only contains `<script src="https://uredi.inzenirji.si/embed.js" data-site="…">`. Embed script budget: ≤ 3 KB gzipped. | Owner choice. Fixes reach every client at once without rebuilding client sites; secrets and logic stay on our origin. An npm wrapper around the same script can be added later if useful. |
+| ADR-003 | 2026-10-13 | Accepted | Stack: TypeScript strict, Node 22, pnpm, Preact + Vite (widget), Hono (API), zod (shared schemas), Vitest (tests), Biome (lint + format). | Owner choice. Preact keeps the widget small; Hono runs on Cloudflare Workers and Node, so the open hosting decision (ADR-006) does not block work. Biome replaces ESLint + Prettier with one dependency. |
+| ADR-004 | 2026-10-13 | Accepted | Working mode B (autonomous). Agent commits on `feat/*`, `fix/*`, `docs/*`, opens PRs to `dev`, merges only on green CI. Never uat/prod, servers, secrets. | Owner chose "B – avtonomno" on 2026-10-13. |
+| ADR-005 | 2026-10-13 | Accepted | Money: customer prices and credit in integer euro **cents**; measured AI cost in integer **micro-euros** (1 € = 1 000 000). Price = ceil(cost × margin) to the cent. | Single-change costs are below one cent (e.g. Haiku < 0,01 €); cents would lose them. Rounding up is never in our disfavour and is shown to the client before publishing. |
+| ADR-006 | 2026-10-13 | Open | Hosting of client sites and of widget/API: Cloudflare (Pages/Workers) vs. own server (Hetzner). | Owner decision pending. Code stays runtime-agnostic (Web standard Request/Response via Hono) until decided. |
+| ADR-007 | 2026-10-13 | Open | Where the content/block schema lives: in the site template repo (API reads it from each client repo) or in a shared package used by both. | Proposed answer: each client repo is the source of truth (`src/schema/` exported as JSON Schema at build time); the API reads it per site, so old sites keep their own schema version. Decide together with phase 0. |
+| ADR-008 | 2026-10-13 | Proposed | Auth across the iframe: magic link to `<site>/uredi#token=…`, embed passes the one-time token to the iframe via `postMessage`, widget exchanges it for a bearer session token kept in memory/partitioned sessionStorage. No third-party cookies. | Third-party cookies in iframes are blocked (Safari) or partitioned (Chrome). This flow works in all major browsers without cookies. Implemented in the auth task. |
