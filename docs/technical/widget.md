@@ -1,6 +1,6 @@
 # Widget — `apps/widget`
 
-Status: **Live** on dev (shell); login UI **Built** (TASK-004b).
+Status: **Live** on dev (shell + login; owner-tested 2026-10-13).
 
 ## What it does today
 A Preact app rendered inside the embed iframe at `https://uredi.inzenirji.si/?site=…&origin=…&lang=…`.

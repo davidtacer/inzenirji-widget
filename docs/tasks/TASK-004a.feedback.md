@@ -1,7 +1,6 @@
 # TASK-004a feedback
-Status: PARTIAL — built and proven locally (unit + real Worker with local D1); the dev deploy (remote migration,
-SMTP) runs after merge. Real mail delivery is NOT RUN until a test user exists on dev and 004b ships
-(or the owner calls the API directly).
+Status: DONE — Live on dev. Owner tested on 2026-10-13 23:24 at https://inzenirji.si/uredi: login link
+arrived by e-mail (real SMTP via mail.datavallis.com), login and logout work.
 
 ## What I implemented
 D1 schema, login request (background, no enumeration, rate limited), single-use link exchange, 30-day sessions,

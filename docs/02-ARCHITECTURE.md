@@ -6,8 +6,8 @@ Status labels: **Live** · **Built** · **Planned**.
 | # | Component | Where | Status |
 |---|---|---|---|
 | 1 | Embed script (`packages/embed`) | `https://uredi.inzenirji.si/embed.js`, loaded by the client's `/uredi` page | Live on dev (`uredi-dev.inzenirji.si`) |
-| 2 | Widget (`apps/widget`) | `https://uredi.inzenirji.si/` inside an iframe | Live on dev (shell) |
-| 3 | Urejevalnik API (`apps/api`) | `https://uredi.inzenirji.si/api/*` (same origin as widget) | Live on dev (health); auth Built |
+| 2 | Widget (`apps/widget`) | `https://uredi.inzenirji.si/` inside an iframe | Live on dev (shell + login) |
+| 3 | Urejevalnik API (`apps/api`) | `https://uredi.inzenirji.si/api/*` (same origin as widget) | Live on dev (health, auth) |
 | 4 | Claude API | Messages API (level 1), Managed Agents (level 2) | Planned |
 | 5 | GitHub | client repo, branches `dev` and `main`, our GitHub App | Planned |
 | 6 | Hosting | Cloudflare Pages: `dev.<site>` (hidden) and `<site>` from `main` | Planned (ADR-009) |
@@ -28,7 +28,7 @@ their-site.si/uredi  (static page from the template)
   versioned message schema in `packages/shared`.
 - Widget and API share an origin, so the API needs no CORS for the widget.
 
-## Auth across the iframe (ADR-008, ADR-010 — Built)
+## Auth across the iframe (ADR-008, ADR-010 — Live on dev)
 Third-party cookies in iframes are blocked or partitioned by browsers, so no cookies are used:
 1. Magic link points to `their-site.si/uredi#login=<one-time token>` (first-party page, fragment never sent to servers).
 2. Embed script reads the fragment, removes it from the URL and posts it to the iframe after `widget:ready`.

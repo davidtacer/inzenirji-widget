@@ -1,6 +1,6 @@
 # TASK-004b feedback
-Status: PARTIAL — built and proven locally in a real browser against the real Worker + local D1; live login on
-dev (real SMTP mail) runs after merge and needs the owner's test user.
+Status: DONE — Live on dev. Owner tested on 2026-10-13 23:24 at https://inzenirji.si/uredi: login link
+arrived by e-mail (real SMTP via mail.datavallis.com), login and logout work.
 
 ## What I implemented
 - Protocol: `embed:login {v, type, token}` (embed → widget), `parseEmbedToWidget`, `loginTokenFromHash`.
