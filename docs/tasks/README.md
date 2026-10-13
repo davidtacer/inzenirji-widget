@@ -3,7 +3,7 @@
 | Task | Title | Depends on | Status |
 |---|---|---|---|
 | TASK-001 | Monorepo scaffold, tooling and CI | — | Built — PR open, awaiting CI + merge |
-| TASK-002 | Deploy skeleton to dev environment | 001, ADR-006 | Blocked (hosting decision) |
+| TASK-002 | Deploy skeleton to dev environment (Cloudflare Worker, `uredi-dev.inzenirji.si`) | 001, ADR-009 | Blocked (owner: Cloudflare token) |
 | TASK-003 | Embed ↔ widget postMessage protocol (versioned, origin-checked) | 001 | Planned |
 | TASK-004 | Auth: magic link + token exchange (ADR-008) | 003 | Planned |
 | TASK-005 | Content adapter: read/write client repo via GitHub App (`content/` only), commit to `dev`, merge, revert | 001 | Planned |
