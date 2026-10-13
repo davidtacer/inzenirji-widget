@@ -1,0 +1,25 @@
+{
+  "name": "inzenirji-widget",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @inzenirji/api --filter @inzenirji/widget dev",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "size": "pnpm --filter @inzenirji/embed size"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "^22.18.0",
+    "happy-dom": "21.0.1",
+    "typescript": "7.0.2",
+    "vitest": "5.0.4"
+  }
+}

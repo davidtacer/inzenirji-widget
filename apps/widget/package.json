@@ -1,0 +1,22 @@
+{
+  "name": "@inzenirji/widget",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @inzenirji/embed build && vite",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@inzenirji/shared": "workspace:*",
+    "preact": "11.0.1"
+  },
+  "devDependencies": {
+    "@inzenirji/embed": "workspace:*",
+    "@preact/preset-vite": "2.10.6",
+    "vite": "8.3.4"
+  }
+}
