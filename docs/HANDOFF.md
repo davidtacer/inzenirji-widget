@@ -30,7 +30,8 @@ Conversation with the owner in Slovenian; code and docs in English.
 ## Done
 - 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it). Default branch `dev` (owner).
 - 2026-10-13: owner merged PR #1 (merge commit a05850e); set Cloudflare secrets for Actions.
-- 2026-10-13: TASK-002 branch `feat/TASK-002-dev-deploy` — Worker + deploy workflow; PR open.
+- 2026-10-13: TASK-002 merged (PR #2, 6c28f06). First Deploy dev run failed: `CLOUDFLARE_API_TOKEN` empty in the
+  workflow (secret not found as a repository Actions secret). Owner to fix the secret; fix PR adds a clear pre-check.
 - 2026-10-13: PR #1 `feat/TASK-001-scaffold` → `dev` (includes the docs foundation commit): monorepo, embed,
   widget shell, API health, CI. CI green (run 38457710002, ~20 s). Proof in `docs/tasks/TASK-001.feedback.md`.
   Branch `docs/foundation` is contained in PR #1 and can be deleted.
