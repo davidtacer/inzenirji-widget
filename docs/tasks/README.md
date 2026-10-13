@@ -13,3 +13,4 @@
 | TASK-008 | Screenshots of preview (desktop + phone) | 005, ADR-009 | Planned |
 | TASK-009 | Payments: Stripe credit, ledger, limits, estimate before send | 006 | Planned (phase 3) |
 | TASK-010 | Level 2 via Managed Agents | 006 | Planned (phase 4) |
+| TASK-011 | Site template (phase 0) + demo client site | 002 | Built — PR open |

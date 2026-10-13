@@ -1,5 +1,7 @@
 # Site template — the `/uredi` page (boilerplate)
 
+Implemented in `apps/site` (TASK-011, see `docs/technical/site.md`).
+
 Requirements for every client site (landing) built from the Inženirji.si template, so the editor works the
 same everywhere. The template lives in its own repo; this file is the source of truth until it exists there.
 Owner decision 2026-10-13.

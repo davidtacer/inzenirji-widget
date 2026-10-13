@@ -1,0 +1,50 @@
+{
+  "slug": "index",
+  "title": "Gostilna Pri Lipi",
+  "seo": {
+    "description": "Domača štajerska kuhinja v Mariboru: sezonske jedi, vrt pod lipo in kosila ob nedeljah."
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "heading": "Domača kuhinja pod staro lipo",
+      "subheading": "Sezonske jedi iz lokalnih sestavin, vrt v senci in nedeljska kosila za vso družino.",
+      "image": { "src": "/uploads/vrt.svg", "alt": "Vrt gostilne s klopmi pod veliko lipo" },
+      "cta": { "label": "Poglejte meni", "href": "/meni" }
+    },
+    { "type": "notice", "text": "Jesenski meni je na voljo od 1. oktobra.", "tone": "info" },
+    {
+      "type": "text",
+      "heading": "Kuhamo kot doma",
+      "body": "Že trideset let kuhamo po receptih naših babic. Zelenjavo dobimo od kmetov iz okolice, kruh pečemo sami vsako jutro."
+    },
+    {
+      "type": "services",
+      "heading": "Pri nas lahko",
+      "items": [
+        {
+          "name": "Nedeljsko kosilo",
+          "description": "Juha, glavna jed s prilogami in sladica.",
+          "priceCents": 1800
+        },
+        { "name": "Zaključene družbe", "description": "Do 40 oseb v sobi ali na vrtu, meni po dogovoru." },
+        {
+          "name": "Malice med tednom",
+          "description": "Od torka do petka med 11. in 14. uro.",
+          "priceCents": 950
+        }
+      ]
+    },
+    {
+      "type": "gallery",
+      "heading": "Pri nas",
+      "images": [
+        { "src": "/uploads/vrt.svg", "alt": "Vrt pod lipo" },
+        { "src": "/uploads/soba.svg", "alt": "Lesena jedilnica s krušno pečjo" },
+        { "src": "/uploads/juha.svg", "alt": "Skleda bučne juhe" }
+      ]
+    },
+    { "type": "hours", "heading": "Delovni čas" },
+    { "type": "contact", "heading": "Kontakt" }
+  ]
+}

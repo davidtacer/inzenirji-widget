@@ -1,0 +1,28 @@
+// Demo client site (ADR-012): static files from out/ served by a Worker with assets, no code.
+// preview = hidden test site built from branch demo/dev; live = demo/main.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "inzenirji-demo-site",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./out",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "env": {
+    "preview": {
+      "name": "inzenirji-demo-site-preview",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "demo-dev.inzenirji.si", "custom_domain": true }]
+    },
+    "live": {
+      "name": "inzenirji-demo-site-live",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "demo.inzenirji.si", "custom_domain": true }]
+    }
+  }
+}

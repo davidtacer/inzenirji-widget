@@ -1,0 +1,18 @@
+{
+  "slug": "o-nas",
+  "title": "O nas",
+  "seo": { "description": "Družinska gostilna pod lipo že trideset let." },
+  "blocks": [
+    {
+      "type": "hero",
+      "heading": "Družinska gostilna od leta 1995",
+      "image": { "src": "/uploads/soba.svg", "alt": "Jedilnica s krušno pečjo" }
+    },
+    {
+      "type": "text",
+      "heading": "Naša zgodba",
+      "body": "Gostilno je odprla babica Marija, danes jo vodi tretja generacija. Lipa na vrtu je starejša od hiše.\n\nPri nas ni naglice: jedi pripravljamo sproti, zato si vzemite čas."
+    },
+    { "type": "contact", "heading": "Pridite na obisk" }
+  ]
+}

@@ -1,0 +1,250 @@
+/* Template design. Colours and fonts come from content/site.json (set as CSS variables on <html>). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.6;
+}
+img {
+  max-width: 100%;
+  display: block;
+}
+a {
+  color: var(--c-primary);
+}
+h1,
+h2,
+h3 {
+  font-family: var(--f-heading);
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+}
+h1 {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+}
+h2 {
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+}
+h3 {
+  font-size: 1.2rem;
+}
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.narrow {
+  max-width: 760px;
+}
+.muted {
+  opacity: 0.75;
+}
+
+.site-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--c-text) 12%, transparent);
+}
+.header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  min-height: 64px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.brand {
+  font-family: var(--f-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--c-text);
+  text-decoration: none;
+}
+.site-header ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.site-header nav a {
+  display: inline-block;
+  padding: 10px 0;
+  color: var(--c-text);
+  text-decoration: none;
+}
+.site-header nav a:hover {
+  color: var(--c-primary);
+}
+
+.hero {
+  padding: 48px 0;
+  background: color-mix(in srgb, var(--c-primary) 8%, var(--c-bg));
+}
+.hero-inner {
+  display: grid;
+  gap: 32px;
+  align-items: center;
+}
+@media (min-width: 860px) {
+  .hero-inner {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+.hero-image {
+  width: 100%;
+  border-radius: 16px;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+.lead {
+  font-size: 1.15rem;
+  max-width: 36em;
+}
+.button {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--c-primary);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.button:hover {
+  background: var(--c-accent);
+}
+
+.notice {
+  padding: 14px 0;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--c-accent) 18%, var(--c-bg));
+}
+.notice-warning {
+  background: color-mix(in srgb, #c0392b 18%, var(--c-bg));
+}
+
+.section {
+  padding-top: 48px;
+  padding-bottom: 16px;
+}
+.cards {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.card {
+  padding: 20px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--c-text) 10%, transparent);
+}
+.card p {
+  margin: 0 0 8px;
+}
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--c-primary);
+}
+
+.menu-group {
+  margin-bottom: 28px;
+}
+.menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.menu-list li {
+  padding: 8px 0;
+}
+.menu-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.menu-name {
+  font-weight: 600;
+}
+.menu-dots {
+  flex: 1;
+  border-bottom: 2px dotted color-mix(in srgb, var(--c-text) 30%, transparent);
+  transform: translateY(-4px);
+}
+.menu-price {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.menu-desc {
+  margin: 2px 0 0;
+  opacity: 0.8;
+  font-size: 0.95rem;
+}
+
+.gallery {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.gallery img {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.hours div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-text) 10%, transparent);
+}
+.hours dt::first-letter {
+  text-transform: uppercase;
+}
+.hours dd {
+  margin: 0;
+  font-weight: 600;
+}
+.contact {
+  list-style: none;
+  padding: 0;
+  font-size: 1.1rem;
+}
+.contact li {
+  padding: 4px 0;
+}
+
+.faq {
+  padding: 12px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-text) 10%, transparent);
+}
+.faq summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.site-footer {
+  margin-top: 64px;
+  padding: 32px 0;
+  background: var(--c-primary);
+  color: #fff;
+}
+.site-footer p {
+  margin: 0 0 6px;
+}

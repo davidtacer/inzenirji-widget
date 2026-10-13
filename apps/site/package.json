@@ -1,0 +1,24 @@
+{
+  "name": "@inzenirji/site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3100",
+    "build": "next build && node scripts/postbuild.mjs",
+    "check": "node scripts/check-build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "deploy:dry-run": "wrangler deploy --env preview --dry-run --outdir dist-worker"
+  },
+  "dependencies": {
+    "@inzenirji/site-schema": "workspace:*",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "wrangler": "4.150.0"
+  }
+}
