@@ -17,6 +17,11 @@ A Preact app rendered inside the embed iframe at `https://uredi.inzenirji.si/?si
   - only the latest auth operation may change the view (`op` counter), so a slow stored-session check
     cannot overwrite a fresh login;
   - "Odjava" clears the stored session at once and calls `POST /api/auth/logout`.
+- Signed in (TASK-007): `src/Editor.tsx` — status bar (links to test and live site, preview build state, number
+  of unpublished changes, **Objavi v živo** / **Zavrzi neobjavljeno** / **Razveljavi zadnjo objavo**, each with an
+  inline confirmation), chat (owner's messages, editor replies with cost, notices), composer (Enter sends,
+  Shift+Enter new line, max 2000 chars). Polls `GET /status` every 10 s while the test site is being rebuilt.
+  401 from any site route ends the session. Client: `src/sites-api.ts`.
 - `src/api.ts` — same-origin client; network failures become `status 0`; responses are zod-validated.
 - `src/session-store.ts` — session in the iframe's localStorage under `inzenirji:session:<siteId>`
   (partitioned per client site by the browser); expired or malformed entries are dropped; every call is
