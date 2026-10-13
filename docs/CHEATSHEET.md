@@ -16,8 +16,14 @@ Never values here — only names and where they live.
 ## URLs
 | Env | URL | Status |
 |---|---|---|
-| dev | `uredi-dev.inzenirji.si` | Planned |
+| dev | https://uredi-dev.inzenirji.si (health: `/api/health`) | Built — first deploy after TASK-002 merge |
 | prod | `uredi.inzenirji.si` | Planned |
+
+## GitHub Actions secrets
+| Name | Used by | Status |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | deploy-dev workflow | Set by owner 2026-10-13 |
+| `CLOUDFLARE_ACCOUNT_ID` | deploy-dev workflow | Set by owner 2026-10-13 |
 
 ## Secrets (names only, where they will live)
 | Name | Used by | Lives in | Status |

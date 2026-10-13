@@ -45,3 +45,7 @@ jobs:
 
       - name: Embed size budget (ADR-002)
         run: pnpm size
+
+      - name: Worker bundle (dry run, no credentials)
+        working-directory: apps/api
+        run: pnpm worker:dry-run
