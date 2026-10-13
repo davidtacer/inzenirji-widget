@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@inzenirji/shared": "workspace:*",
+    "@inzenirji/site-schema": "workspace:*",
     "hono": "4.13.13",
     "worker-mailer": "1.2.1"
   },

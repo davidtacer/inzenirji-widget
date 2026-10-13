@@ -8,7 +8,7 @@
 | TASK-004a | Auth API: D1, magic link mail, exchange, sessions, limits (ADR-010) | 002 | Done (PR #4) |
 | TASK-004b | Auth UI: embed passes `#login` token, widget login form + session | 004a | Done — Live on dev (PR #5) |
 | TASK-005 | Content on GitHub: read/write content files, commit to dev, publish, undo, discard | 011 | Built — PR open |
-| TASK-006 | Agent loop level 1: tools over JSON, schema validation, step limits, cost metering (micro-euros) | 005 | Planned |
+| TASK-006 | Agent loop level 1: tools over JSON, schema validation, step limits, cost metering (micro-euros) | 005 | Built — PR open |
 | TASK-007 | Widget chat UI: send, show result, test-site link, price, Publish, Undo | 003, 004b, 006 | Planned |
 | TASK-008 | Screenshots of preview (desktop + phone) | 005, ADR-009 | Planned |
 | TASK-009 | Payments: Stripe credit, ledger, limits, estimate before send | 006 | Planned (phase 3) |

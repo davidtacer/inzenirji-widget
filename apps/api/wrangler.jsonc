@@ -1,6 +1,7 @@
 // Cloudflare Worker: widget (static assets) + API (/api/*) on one origin. ADR-009, ADR-010.
 // Only the `dev` environment is defined. Production is added by the owner's decision, never by CI on its own.
-// Secrets (never here): SMTP_PASSWORD — Cloudflare dashboard → Worker → Settings → Variables and Secrets.
+// Secrets (never here): SMTP_PASSWORD, GITHUB_TOKEN, ANTHROPIC_API_KEY — Cloudflare dashboard → Worker →
+// Settings → Variables and Secrets.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "inzenirji-editor",
@@ -34,7 +35,10 @@
         "SMTP_PORT": "465",
         "SMTP_USER": "hello@inzenirji.si",
         "MAIL_FROM": "hello@inzenirji.si",
-        "MAIL_FROM_NAME": "Inženirji.si"
+        "MAIL_FROM_NAME": "Inženirji.si",
+        "EDIT_MODEL": "claude-sonnet-5-5",
+        "USD_TO_EUR": "0.92",
+        "PRICE_MARGIN": "1"
       }
     }
   }

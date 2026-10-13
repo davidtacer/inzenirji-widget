@@ -1,3 +1,5 @@
+import { anthropicCaller } from "./agent/claude.ts";
+import { isKnownModel } from "./agent/pricing.ts";
 import { configFromEnv, createApp } from "./app.ts";
 import { createGitHubStore } from "./content/github.ts";
 import type { Db } from "./db.ts";
@@ -23,6 +25,26 @@ export interface WorkerEnv {
    * for this repo, ADR-012). Without it /api/sites/* answers 503 github_unavailable.
    */
   GITHUB_TOKEN?: string;
+  /** Secret: Anthropic API key for the editing agent. Without it POST /edit answers 503 agent_unavailable. */
+  ANTHROPIC_API_KEY?: string;
+  /** Model id for edits (default claude-sonnet-5-5). */
+  EDIT_MODEL?: string;
+  /** USD → EUR rate for cost metering (default 0.92). */
+  USD_TO_EUR?: string;
+  /** Client price margin over AI cost (default 1 = cost price; billing is not live yet). */
+  PRICE_MARGIN?: string;
+}
+
+const DEFAULT_MODEL = "claude-sonnet-5-5";
+
+/** Agent configuration from env; null when there is no API key or the model has no known price. */
+export function agentFromEnv(env: WorkerEnv) {
+  const apiKey = env.ANTHROPIC_API_KEY?.trim();
+  const model = env.EDIT_MODEL?.trim() || DEFAULT_MODEL;
+  const usdToEur = Number(env.USD_TO_EUR ?? "0.92");
+  const margin = Number(env.PRICE_MARGIN ?? "1");
+  if (!apiKey || !isKnownModel(model) || !(usdToEur > 0) || !(margin >= 1)) return null;
+  return { callModel: anthropicCaller(apiKey), model, usdToEur, margin };
 }
 
 interface ExecutionContextLike {
@@ -71,6 +93,7 @@ export default {
           }
         : undefined;
     const db = env.DB;
+    const agent = agentFromEnv(env);
     const githubToken = env.GITHUB_TOKEN?.trim();
     const sites = db
       ? {
@@ -78,6 +101,7 @@ export default {
           now: () => Date.now(),
           storeFor: (repo: Parameters<typeof createGitHubStore>[0]) =>
             githubToken ? createGitHubStore(repo, githubToken) : null,
+          ...(agent ? { agent } : {}),
         }
       : undefined;
     return createApp({ ...config, ...(auth ? { auth } : {}), ...(sites ? { sites } : {}) }).fetch(request);

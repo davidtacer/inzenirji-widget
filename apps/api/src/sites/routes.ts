@@ -1,8 +1,11 @@
 import type { ErrorResponse, SessionInfo } from "@inzenirji/shared";
 import { isValidSiteId } from "@inzenirji/shared/site-id";
 import { type Context, Hono } from "hono";
+import { runEdit } from "../agent/agent.ts";
+import { type CallModel, ModelError } from "../agent/claude.ts";
+import { costMicros, priceCents, sumUsage } from "../agent/pricing.ts";
 import { bearerToken } from "../auth/routes.ts";
-import { getSession } from "../auth/service.ts";
+import { getSession, hitRateLimit } from "../auth/service.ts";
 import { type GitHubContentStore, GitHubError, type RepoConfig } from "../content/github.ts";
 import type { Db } from "../db.ts";
 
@@ -21,7 +24,20 @@ export interface SiteRouteDeps {
   now: () => number;
   /** Builds a store for a repo; null when GitHub access is not configured (no token). */
   storeFor: (repo: RepoConfig) => GitHubContentStore | null;
+  /** Editing agent; without it POST /edit answers 503 agent_unavailable (no API key). */
+  agent?: AgentConfig;
 }
+
+export interface AgentConfig {
+  callModel: CallModel;
+  model: string;
+  usdToEur: number;
+  /** Client price = cost × margin, rounded up to the cent (margin to be decided after phase 1). */
+  margin: number;
+}
+
+export const EDIT_LIMIT_PER_HOUR = 30;
+export const MAX_MESSAGE_CHARS = 2000;
 
 export async function loadSiteRepo(db: Db, siteId: string): Promise<SiteRepoRow | null> {
   return db
@@ -182,6 +198,107 @@ export function siteRoutes(deps: SiteRouteDeps) {
     } catch (e) {
       return githubErrorResponse(c, e);
     }
+  });
+
+  app.post("/:siteId/edit", async (c) => {
+    const ctx = await siteContext(c, deps);
+    if (ctx instanceof Response) return ctx;
+    const err = (error: string, status: 400 | 409 | 429 | 502 | 503) =>
+      c.json<ErrorResponse>({ error }, status);
+    if (!deps.agent) return err("agent_unavailable", 503);
+    let message: unknown;
+    try {
+      message = ((await c.req.json()) as { message?: unknown }).message;
+    } catch {
+      return err("invalid_request", 400);
+    }
+    if (typeof message !== "string" || !message.trim() || message.length > MAX_MESSAGE_CHARS) {
+      return err("invalid_request", 400);
+    }
+    const request = message.trim();
+    const siteId = ctx.session.siteId;
+    if (!(await hitRateLimit(deps.db, `edit-site:${siteId}`, EDIT_LIMIT_PER_HOUR, deps.now()))) {
+      return err("rate_limited", 429);
+    }
+
+    let snapshot: Awaited<ReturnType<GitHubContentStore["read"]>>;
+    try {
+      snapshot = await ctx.store.read(ctx.repo.devBranch);
+    } catch (e) {
+      return githubErrorResponse(c, e);
+    }
+    const { results: history } = await deps.db
+      .prepare(
+        `SELECT request, reply, created_at AS at FROM change_log
+         WHERE site_id = ?1 AND kind = 'edit' AND request IS NOT NULL AND reply IS NOT NULL
+         ORDER BY id DESC LIMIT 5`,
+      )
+      .bind(siteId)
+      .all<{ request: string; reply: string; at: number }>();
+
+    const { agent } = deps;
+    let result: Awaited<ReturnType<typeof runEdit>>;
+    try {
+      result = await runEdit({ snapshot, request, history }, agent.callModel, agent.model);
+    } catch (e) {
+      if (e instanceof ModelError) {
+        console.error("[edit] model error:", e.status);
+        return err("agent_unavailable", 502);
+      }
+      throw e;
+    }
+
+    const cost = costMicros(agent.model, result.usage, agent.usdToEur);
+    const price = priceCents(cost, agent.margin);
+    let commitSha: string | null = null;
+    let conflict = false;
+    if (result.changes.length > 0) {
+      try {
+        const subject = request.split("\n")[0]?.slice(0, 72) ?? "sprememba";
+        commitSha = await ctx.store.commit(result.changes, `Urejevalnik: ${subject}`, snapshot.headSha);
+      } catch (e) {
+        if (e instanceof GitHubError && e.code === "conflict") conflict = true;
+        else {
+          await logChange(deps.db, {
+            siteId,
+            email: ctx.session.email,
+            kind: "edit",
+            request,
+            reply: result.reply,
+            model: agent.model,
+            usage: sumUsage(result.usage),
+            costMicros: cost,
+            priceCents: price,
+            at: deps.now(),
+          });
+          return githubErrorResponse(c, e);
+        }
+      }
+    }
+    // Every processed request is logged with its cost, also when nothing was committed.
+    await logChange(deps.db, {
+      siteId,
+      email: ctx.session.email,
+      kind: "edit",
+      commitSha,
+      request,
+      reply: result.reply,
+      model: agent.model,
+      usage: sumUsage(result.usage),
+      costMicros: cost,
+      priceCents: price,
+      at: deps.now(),
+    });
+    if (conflict) return err("conflict", 409);
+    return c.json({
+      reply: result.reply,
+      changed: commitSha !== null,
+      files: result.changes.map((ch) => ch.path),
+      escalated: result.escalated,
+      previewUrl: ctx.repo.previewUrl,
+      costMicros: cost,
+      priceCents: price,
+    });
   });
 
   return app;

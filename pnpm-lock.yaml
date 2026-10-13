@@ -29,6 +29,9 @@ importers:
       '@inzenirji/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@inzenirji/site-schema':
+        specifier: workspace:*
+        version: link:../../packages/site-schema
       hono:
         specifier: 4.13.13
         version: 4.13.13
