@@ -6,4 +6,4 @@
 | `widget.md` | `apps/widget` | Built |
 | `api.md` | `apps/api`, `packages/shared/src/api.ts` | Built |
 | `tooling.md` | root config, `.github/workflows/ci.yml` | Built |
-| `deploy.md` | `apps/api/wrangler.jsonc`, `apps/api/src/worker.ts`, `.github/workflows/deploy-dev.yml` | Built |
+| `deploy.md` | `apps/api/wrangler.jsonc`, `apps/api/src/worker.ts`, `.github/workflows/deploy-dev.yml` | Live (dev) |

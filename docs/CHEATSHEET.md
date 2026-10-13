@@ -16,7 +16,7 @@ Never values here — only names and where they live.
 ## URLs
 | Env | URL | Status |
 |---|---|---|
-| dev | https://uredi-dev.inzenirji.si (health: `/api/health`) | Built — first deploy after TASK-002 merge |
+| dev | https://uredi-dev.inzenirji.si (health: `/api/health`) | Live (2026-10-13) |
 | prod | `uredi.inzenirji.si` | Planned |
 
 ## GitHub Actions secrets
