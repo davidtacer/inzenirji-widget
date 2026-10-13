@@ -1,6 +1,6 @@
 # TASK-001 feedback
-Status: PARTIAL — code, local proof and docs done; CI run on GitHub and merge pending (the agent's session
-may not merge PRs, see HANDOFF "Owner's open actions").
+Status: PARTIAL — code, local proof, docs and CI green; merge into `dev` pending (the agent's session may not
+merge PRs, see HANDOFF "Owner's open actions"). PR: https://github.com/davidtacer/inzenirji-widget/pull/1
 
 ## What I implemented
 - pnpm monorepo with `apps/widget`, `apps/api`, `packages/embed`, `packages/shared`; Biome, TS strict, Vitest.
@@ -63,6 +63,9 @@ desktop iframes: 1 | h1: Urejevalnik | site: demo-site | after close url: http:/
 mobile  iframes: 1 | h1: Urejevalnik | site: demo-site | after close url: http://localhost:5173/ | console errors: []
 ```
 
+CI on GitHub, PR #1, commit b8fbf36: job `CI` → **success**, 2026-10-13T19:48:05Z → 19:48:25Z (20 s),
+https://github.com/davidtacer/inzenirji-widget/actions/runs/38457710002/job/115504591491
+
 ## Deliberate breaks
 1. Site id pattern changed to allow uppercase →
    `FAIL src/shared.test.ts > isValidSiteId > "Abc" → false` · `Tests 1 failed | 32 passed (33)`.
@@ -72,7 +75,6 @@ mobile  iframes: 1 | h1: Urejevalnik | site: demo-site | after close url: http:/
    `Tests 1 failed | 12 passed (13)`. Restored → `Tests 13 passed (13)`.
 
 ## NOT RUN
-- CI on GitHub — NOT RUN at time of writing; result recorded in HANDOFF after the PR runs.
 - Deploy / smoke on dev — NOT RUN: no environment (ADR-006 open).
 
 ## Docs updated

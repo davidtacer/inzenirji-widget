@@ -358,7 +358,7 @@ Status values: Proposed · Accepted · Superseded by ADR-XXX · Open.
 | Stack | TypeScript (strict), Node 22, pnpm workspaces, Preact + Vite (widget), Hono (API), zod (schemas), Vitest, Biome; Playwright later |
 | Environments and URLs | Planned — hosting not decided yet (ADR-006). Target: dev `uredi-dev.inzenirji.si` · prod `uredi.inzenirji.si` |
 | Test commands | lint: `pnpm lint` · typecheck: `pnpm typecheck` · unit: `pnpm test` · build: `pnpm build` · e2e: Planned |
-| CI duration / deploy duration | measured after first CI run (see HANDOFF) / deploy Planned |
+| CI duration / deploy duration | ~20 s (2026-10-13) / deploy Planned |
 | PR size guideline | ~800 changed lines |
 | AI-use policy | trailer + `Prompt:` line: yes |
 

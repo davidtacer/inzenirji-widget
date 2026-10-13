@@ -29,13 +29,13 @@ Conversation with the owner in Slovenian; code and docs in English.
 
 ## Done
 - 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it).
-- 2026-10-13: branch `docs/foundation` (docs, ADR-001…008) — pushed, PR to `dev` to be merged by owner.
-- 2026-10-13: branch `feat/TASK-001-scaffold` (stacked on `docs/foundation`) — monorepo, embed, widget shell,
-  API health, CI. Local proof in `docs/tasks/TASK-001.feedback.md`. Merge after `docs/foundation`.
+- 2026-10-13: PR #1 `feat/TASK-001-scaffold` → `dev` (includes the docs foundation commit): monorepo, embed,
+  widget shell, API health, CI. CI green (run 38457710002, ~20 s). Proof in `docs/tasks/TASK-001.feedback.md`.
+  Branch `docs/foundation` is contained in PR #1 and can be deleted.
 
 ## Owner's open actions
-0. **Merge the two PRs into `dev`, in order:** `docs/foundation`, then `feat/TASK-001-scaffold`
-   (links in the chat). Merge the second only if its `CI` check is green.
+0. **Merge PR #1 into `dev`** (squash) when its `CI` check is green:
+   https://github.com/davidtacer/inzenirji-widget/pull/1 — then delete branch `docs/foundation`.
 1. **Set default branch to `dev`**: https://github.com/davidtacer/inzenirji-widget/settings → General →
    Default branch → `dev`.
 2. **Hosting decision (ADR-006)**: Cloudflare or Hetzner — blocks TASK-002 (dev deploy) and TASK-008.
