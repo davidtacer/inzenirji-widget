@@ -8,6 +8,10 @@ Status of every item: **Planned** unless a technical doc says otherwise.
   Edits their own site by writing messages, mostly on a phone.
 - **Operator (Inženirji.si):** sets up the site, watches costs, handles level-2 escalations.
 
+## The `/uredi` page on client sites
+Not indexed (noindex meta + `X-Robots-Tag`, `Disallow: /uredi` in robots.txt, not in the sitemap, never linked)
+and without header/footer so the editor fills the screen. Boilerplate: `docs/template/uredi-page.md`.
+
 ## Core flow (one change)
 1. Client opens `their-site.si/uredi` and signs in with a magic link sent by e-mail.
 2. Client writes a change, optionally attaches images. API checks the credit balance.
