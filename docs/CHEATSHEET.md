@@ -29,6 +29,8 @@ Never values here — only names and where they live.
 | Name | Used by | Status |
 |---|---|---|
 | `SMTP_PASSWORD` | login e-mails (`hello@inzenirji.si`) | Set by owner 2026-10-13 |
+| `GITHUB_TOKEN` | content read/write, publish (fine-grained, this repo, Contents RW + Checks R) | **to set** (morning) |
+| `ANTHROPIC_API_KEY` | editing agent | **to set** (morning) |
 
 ## D1
 | Env | Database | Console |
