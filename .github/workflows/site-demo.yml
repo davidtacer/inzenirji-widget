@@ -60,8 +60,10 @@ jobs:
 
       - name: Smoke test
         run: |
+          code=000
           for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "$SITE_URL/")
+            # A new custom domain may not resolve for a minute; GitHub runs bash with -e, so never let curl fail here.
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$SITE_URL/" || true)
             [ "$code" = 200 ] && break
             echo "attempt $i: $code — waiting"; sleep 10
           done
