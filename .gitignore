@@ -11,3 +11,6 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 dist-worker/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
