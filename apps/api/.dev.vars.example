@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local `pnpm dev`. .dev.vars is gitignored.
+# Prints login e-mails (with the link) to the terminal instead of sending them. Only works on localhost.
+MAIL_TRANSPORT=console

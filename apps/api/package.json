@@ -4,20 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/node.ts",
-    "start": "tsx src/node.ts",
+    "dev": "wrangler d1 migrations apply DB --env dev --local && wrangler dev --env dev --port 8787 --local-upstream localhost:8787",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "deploy:dev": "wrangler deploy --env dev",
     "worker:dry-run": "wrangler deploy --env dev --dry-run --outdir dist-worker"
   },
   "dependencies": {
-    "@hono/node-server": "2.1.5",
     "@inzenirji/shared": "workspace:*",
-    "hono": "4.13.13"
+    "hono": "4.13.13",
+    "worker-mailer": "1.2.1"
   },
   "devDependencies": {
-    "tsx": "4.23.15",
     "wrangler": "4.150.0"
   }
 }
