@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { HealthResponse } from "./api.ts";
-import { EMBED_PROTOCOL_VERSION, isHttpOrigin, parseWidgetToEmbed, widgetMessage } from "./embed-protocol.ts";
+import {
+  EMBED_PROTOCOL_VERSION,
+  isHttpOrigin,
+  loginTokenFromHash,
+  parseEmbedToWidget,
+  parseWidgetToEmbed,
+  widgetMessage,
+} from "./embed-protocol.ts";
 import { isValidSiteId } from "./site-id.ts";
 
 describe("isValidSiteId", () => {
@@ -75,4 +82,42 @@ describe("HealthResponse", () => {
     expect(HealthResponse.safeParse({ status: "down", version: "x" }).success).toBe(false);
     expect(HealthResponse.safeParse({ status: "ok", version: "x", extra: 1 }).success).toBe(false);
   });
+});
+
+describe("parseEmbedToWidget", () => {
+  const token = "a".repeat(43);
+  it("accepts a login message with a well-formed token", () => {
+    expect(parseEmbedToWidget({ v: 1, type: "embed:login", token })).toEqual({
+      v: 1,
+      type: "embed:login",
+      token,
+    });
+  });
+
+  it.each([
+    ["short token", { v: 1, type: "embed:login", token: "a".repeat(42) }],
+    ["long token", { v: 1, type: "embed:login", token: "a".repeat(44) }],
+    ["bad chars", { v: 1, type: "embed:login", token: `${"a".repeat(42)}=` }],
+    ["wrong type", { v: 1, type: "widget:close", token }],
+    ["wrong version", { v: 2, type: "embed:login", token }],
+    ["extra key", { v: 1, type: "embed:login", token, site: "x" }],
+    ["missing token", { v: 1, type: "embed:login" }],
+    ["string", "embed:login"],
+    ["null", null],
+  ])("rejects %s", (_name, data) => {
+    expect(parseEmbedToWidget(data)).toBeNull();
+  });
+});
+
+describe("loginTokenFromHash", () => {
+  const token = "Ab-_".repeat(10).concat("xyz");
+  it("extracts the token", () => {
+    expect(loginTokenFromHash(`#login=${token}`)).toBe(token);
+  });
+  it.each(["", "#", `#login=${token}x`, `#login=${token.slice(1)}`, `#foo=${token}`, `#login=${token}&a=1`])(
+    "rejects %j",
+    (hash) => {
+      expect(loginTokenFromHash(hash)).toBeNull();
+    },
+  );
 });

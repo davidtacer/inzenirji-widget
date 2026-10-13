@@ -137,3 +137,109 @@ describe("mount", () => {
     });
   });
 });
+
+describe("login token handoff", () => {
+  const EDITOR = "https://uredi.inzenirji.si";
+  const TOKEN = "T".repeat(40).concat("a-_");
+  const disposers: Array<() => void> = [];
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    window.history.replaceState(null, "", "/uredi");
+  });
+  afterEach(() => {
+    for (const d of disposers.splice(0)) d();
+    window.history.replaceState(null, "", "/");
+    vi.restoreAllMocks();
+  });
+
+  function mountWithHash(hash: string) {
+    window.history.replaceState(null, "", `/uredi?x=1${hash}`);
+    const script = document.createElement("script");
+    script.setAttribute("src", `${EDITOR}/embed.js`);
+    script.setAttribute("data-site", "hisa-denk");
+    const result = mount(script);
+    if (!result) throw new Error("mount failed");
+    disposers.push(result.dispose);
+    const frame = { postMessage: vi.fn() };
+    Object.defineProperty(result.iframe, "contentWindow", { configurable: true, get: () => frame });
+    const ready = (origin = EDITOR, source: unknown = frame) =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { v: 1, type: "widget:ready" },
+          origin,
+          source: source as MessageEventSource,
+        }),
+      );
+    return { frame, ready };
+  }
+
+  it("removes #login from the address bar immediately, keeping path and query", () => {
+    mountWithHash(`#login=${TOKEN}`);
+    expect(window.location.hash).toBe("");
+    expect(window.location.pathname).toBe("/uredi");
+    expect(window.location.search).toBe("?x=1");
+  });
+
+  it("sends the token to the widget once, only after widget:ready, to the editor origin", () => {
+    const { frame, ready } = mountWithHash(`#login=${TOKEN}`);
+    expect(frame.postMessage).not.toHaveBeenCalled();
+    ready();
+    expect(frame.postMessage).toHaveBeenCalledTimes(1);
+    expect(frame.postMessage).toHaveBeenCalledWith({ v: 1, type: "embed:login", token: TOKEN }, EDITOR);
+    ready();
+    expect(frame.postMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not send the token when widget:ready comes from a wrong origin or window", () => {
+    const { frame, ready } = mountWithHash(`#login=${TOKEN}`);
+    ready("https://evil.example");
+    ready(EDITOR, window);
+    expect(frame.postMessage).not.toHaveBeenCalled();
+  });
+
+  it.each(["", "#login=short", `#login=${TOKEN}x`, `#other=${TOKEN}`])(
+    "sends nothing for hash %j",
+    (hash) => {
+      const { frame, ready } = mountWithHash(hash);
+      ready();
+      expect(frame.postMessage).not.toHaveBeenCalled();
+      if (hash) expect(window.location.hash).toBe(hash);
+    },
+  );
+});
+
+describe("login link opened in a tab that already shows /uredi", () => {
+  const EDITOR = "https://uredi.inzenirji.si";
+  const TOKEN = "H".repeat(43);
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+    vi.restoreAllMocks();
+  });
+
+  it("picks the token up on hashchange and sends it at once when the widget is ready", () => {
+    document.body.innerHTML = "";
+    window.history.replaceState(null, "", "/uredi");
+    const script = document.createElement("script");
+    script.setAttribute("src", `${EDITOR}/embed.js`);
+    script.setAttribute("data-site", "hisa-denk");
+    const result = mount(script);
+    if (!result) throw new Error("mount failed");
+    const frame = { postMessage: vi.fn() };
+    Object.defineProperty(result.iframe, "contentWindow", { configurable: true, get: () => frame });
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: { v: 1, type: "widget:ready" },
+        origin: EDITOR,
+        source: frame as unknown as MessageEventSource,
+      }),
+    );
+    expect(frame.postMessage).not.toHaveBeenCalled();
+
+    window.history.replaceState(null, "", `/uredi#login=${TOKEN}`);
+    window.dispatchEvent(new Event("hashchange"));
+    expect(frame.postMessage).toHaveBeenCalledWith({ v: 1, type: "embed:login", token: TOKEN }, EDITOR);
+    expect(window.location.hash).toBe("");
+    result.dispose();
+  });
+});

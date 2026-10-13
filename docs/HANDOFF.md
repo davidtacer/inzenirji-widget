@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-13 23:00 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-13 23:20 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -35,7 +35,8 @@ Conversation with the owner in Slovenian; code and docs in English.
 - 2026-10-13: owner merged PR #1 (merge commit a05850e); set Cloudflare secrets for Actions.
 - 2026-10-13: owner set Worker secret `SMTP_PASSWORD`, created D1 `inzenirji-editor-dev`
   (0cbe9b52-ff01-40d8-a348-cb54b05def54); PR #3 merged.
-- 2026-10-13: TASK-004a (auth API) on `feat/TASK-004a-auth-api` — PR open. Proof in `docs/tasks/TASK-004a.feedback.md`.
+- 2026-10-13: TASK-004a (auth API) merged (PR #4, 2bb978c). Proof in `docs/tasks/TASK-004a.feedback.md`.
+- 2026-10-13: TASK-004b (login UI) on `feat/TASK-004b-auth-ui` — PR open. Browser proof in `TASK-004b.feedback.md`.
 - 2026-10-13: TASK-002 merged (PR #2, 6c28f06). First Deploy dev run failed: `CLOUDFLARE_API_TOKEN` empty
   (owner had entered the secrets wrongly). Owner fixed the secrets and re-ran Deploy dev → green; owner confirmed
   https://uredi-dev.inzenirji.si/api/health works (22:38). **Live on dev.** PR #3 adds a clear secret pre-check.
@@ -44,9 +45,8 @@ Conversation with the owner in Slovenian; code and docs in English.
   Branch `docs/foundation` is contained in PR #1 and can be deleted.
 
 ## Owner's open actions
-0. Merge the TASK-004a PR when `CI` is green; check that "Deploy dev" is green (it now applies D1 migrations and
-   smoke-tests auth wiring). If the migration step fails with an authorization error, the Cloudflare token lacks
-   **Account → D1 → Edit**.
+0. Merge the TASK-004b PR when `CI` is green, check "Deploy dev" is green, then try the login on dev
+   (see the chat for the test page). PR #4 (004a) was merged; its deploy result is not visible to the agent.
 0b. Add yourself as a test user on dev (runbook `docs/runbooks/add-site-user.md`, site e.g. `demo-site` with
    origin of the test page) — needed to try login once TASK-004b ships.
 0c. SPF for `inzenirji.si` is `v=spf1 +a +mx ~all`: login mails only pass SPF if `mail.datavallis.com` sends from an
@@ -59,8 +59,8 @@ Conversation with the owner in Slovenian; code and docs in English.
 - npm wrapper package around the embed script (ADR-002) if a non-template site ever needs it.
 
 ## Next
-TASK-004b (embed passes `#login` token, widget login form, session in iframe storage), then TASK-005
-(GitHub content adapter). Latest TASK: 010 (004 split a/b) · latest ADR: 010.
+TASK-005 (GitHub content adapter: GitHub App, read/write `content/` on `dev`, merge, revert) — needs a
+GitHub App from the owner and a test client repo; or the site template (phase 0) first. Latest TASK: 010 (004 split a/b) · latest ADR: 010.
 
 ## Open items
 - Conversation retention proposed 12 months (owner to confirm); site "notes" + recent-change summary go into TASK-006.

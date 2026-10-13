@@ -1,4 +1,9 @@
-import { isHttpOrigin, parseWidgetToEmbed } from "@inzenirji/shared/embed-protocol";
+import {
+  EMBED_PROTOCOL_VERSION,
+  isHttpOrigin,
+  loginTokenFromHash,
+  parseWidgetToEmbed,
+} from "@inzenirji/shared/embed-protocol";
 import { isValidSiteId } from "@inzenirji/shared/site-id";
 
 export const IFRAME_ID = "inzenirji-editor";
@@ -32,6 +37,18 @@ export function mount(script: HTMLScriptElement | null, win: Window = window): M
     return { iframe: existing as HTMLIFrameElement, dispose: () => {} };
   }
 
+  // One-time login token from the e-mail link (#login=…). Removed from the address bar at once so it is not
+  // kept in history or shared by copying the URL; handed to the widget only after it reports ready.
+  let pendingLoginToken: string | null = null;
+  let widgetReady = false;
+  const takeTokenFromUrl = () => {
+    const token = loginTokenFromHash(win.location.hash);
+    if (!token) return;
+    win.history.replaceState(win.history.state, "", win.location.pathname + win.location.search);
+    pendingLoginToken = token;
+    sendPendingToken();
+  };
+
   const src = new URL("/", editorOrigin);
   src.searchParams.set("site", siteId);
   src.searchParams.set("origin", win.location.origin);
@@ -47,18 +64,42 @@ export function mount(script: HTMLScriptElement | null, win: Window = window): M
   );
   doc.body.appendChild(iframe);
 
+  // A link opened in a tab that already shows /uredi only changes the hash (no reload): handle that too.
+  const targetOrigin: string = editorOrigin;
+  function sendPendingToken() {
+    const frameWindow = iframe.contentWindow;
+    if (!widgetReady || !pendingLoginToken || !frameWindow) return;
+    frameWindow.postMessage(
+      { v: EMBED_PROTOCOL_VERSION, type: "embed:login", token: pendingLoginToken },
+      targetOrigin,
+    );
+    pendingLoginToken = null; // sent once
+  }
+
   const onMessage = (event: MessageEvent) => {
     const frameWindow = iframe.contentWindow;
     if (!frameWindow || event.source !== frameWindow || event.origin !== editorOrigin) return;
     const message = parseWidgetToEmbed(event.data);
+    if (message?.type === "widget:ready") {
+      widgetReady = true;
+      sendPendingToken();
+    }
     if (message?.type === "widget:close") {
       if (win.history.length > 1) win.history.back();
       else win.location.assign("/");
     }
   };
   win.addEventListener("message", onMessage);
+  win.addEventListener("hashchange", takeTokenFromUrl);
+  takeTokenFromUrl();
 
-  return { iframe, dispose: () => win.removeEventListener("message", onMessage) };
+  return {
+    iframe,
+    dispose: () => {
+      win.removeEventListener("message", onMessage);
+      win.removeEventListener("hashchange", takeTokenFromUrl);
+    },
+  };
 }
 
 function resolveEditorOrigin(script: HTMLScriptElement | null): string | null {

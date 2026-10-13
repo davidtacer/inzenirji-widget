@@ -30,6 +30,33 @@ export function widgetMessage(type: WidgetToEmbedType): WidgetToEmbedMessage {
   return { v: EMBED_PROTOCOL_VERSION, type };
 }
 
+/** Login link token: 32 random bytes as base64url (43 chars). Same format as TOKEN_PATTERN in auth.ts. */
+export const LOGIN_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+/** Message sent from the embed script (parent page) to the widget (iframe). */
+export interface EmbedLoginMessage {
+  v: typeof EMBED_PROTOCOL_VERSION;
+  type: "embed:login";
+  /** One-time login token taken from `#login=<token>` on the client's /uredi page. */
+  token: string;
+}
+
+/** Returns the message if it is exactly `{ v, type: "embed:login", token }` with a well-formed token. */
+export function parseEmbedToWidget(data: unknown): EmbedLoginMessage | null {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return null;
+  if (Object.keys(data).length !== 3) return null;
+  const { v, type, token } = data as Record<string, unknown>;
+  if (v !== EMBED_PROTOCOL_VERSION || type !== "embed:login") return null;
+  if (typeof token !== "string" || !LOGIN_TOKEN_PATTERN.test(token)) return null;
+  return { v: EMBED_PROTOCOL_VERSION, type: "embed:login", token };
+}
+
+/** Reads `#login=<token>` from a URL hash; returns the token or null. */
+export function loginTokenFromHash(hash: string): string | null {
+  const match = /^#login=([A-Za-z0-9_-]{43})$/.exec(hash);
+  return match?.[1] ?? null;
+}
+
 /** True for an `http:` or `https:` origin string such as "https://hisa-denk.si" (no path). */
 export function isHttpOrigin(value: unknown): value is string {
   if (typeof value !== "string") return false;
