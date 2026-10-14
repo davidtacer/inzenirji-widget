@@ -12,7 +12,7 @@
     },
     {
       "type": "menu",
-      "heading": "Kaj kuhamo",
+      "heading": "Naše kuhanje",
       "note": "Vse cene vključujejo DDV.",
       "groups": [
         {
@@ -58,7 +58,7 @@
           "items": [
             {
               "name": "Prekmurska gibanica",
-              "priceCents": 480
+              "priceCents": 700
             },
             {
               "name": "Jabolčni zavitek",
