@@ -1,9 +1,11 @@
 # Content on GitHub, publish, undo — `apps/api/src/content`, `apps/api/src/sites`
 
-Status: **Built** (TASK-005). Needs the Worker secret `GITHUB_TOKEN` and a `site_repos` row per site.
+Status: **Live** on dev (TASK-005). Needs the Worker secret `GITHUB_TOKEN` and a `site_repos` row per site.
+What a site repo must contain: `docs/guides/site-contract.md`.
 
 ## Model (ADR-012)
-Each site's content lives in a GitHub repo under `content_root` (`site.json`, `pages/<slug>.json`):
+Each site's content lives in a GitHub repo under `content_root` (`schema.json` — the site's own content schema,
+ADR-013, read-only for the editor — plus `site.json`, `pages/<slug>.json`):
 - `dev_branch` = hidden test site (every editor change is one commit here),
 - `main_branch` = live site (changes arrive only by **publish**).
 The site template builds and deploys each branch (demo: `.github/workflows/site-demo.yml`).
@@ -11,7 +13,7 @@ The site template builds and deploys each branch (demo: `.github/workflows/site-
 ## Store (`content/github.ts`)
 | Method | GitHub calls | Notes |
 |---|---|---|
-| `read(branch)` | ref → contents of `site.json`, list + contents of `pages/` | pinned to the head SHA it read |
+| `read(branch)` | ref → `schema.json`, `site.json`, list + contents of `pages/` | pinned to the head SHA it read; missing/invalid schema → `SiteSchemaError` (route: `503 site_schema_invalid`) |
 | `commit(changes, msg, expectedHead)` | ref, commit, `POST git/trees` (inline content / `sha:null` delete), `POST git/commits`, `PATCH ref force:false` | only `site.json` and `pages/<slug>.json` (`isAllowedContentPath`); refuses if the branch moved since `read` |
 | `publish(msg)` | compare (content files only) → `POST merges` dev→main | no-op when no content file differs; commit message starts with `Objava urejevalnika: ` |
 | `undoLastPublish()` | head commit must start with the publish prefix → new commit on main with the parent's tree → merge main→dev | never reverts template/code commits or an undo |

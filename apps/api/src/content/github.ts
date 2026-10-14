@@ -1,6 +1,9 @@
+import { parseSiteSchema, SCHEMA_FILE, type SiteSchema } from "./site-schema.ts";
+
 /**
- * Site content on GitHub (TASK-005, ADR-012). Reads `site.json` + `pages/*.json` from a branch and writes all
- * changes of one edit as a single commit. Writes are only ever allowed under the site's content root.
+ * Site content on GitHub (TASK-005, ADR-012, ADR-013). Reads the site's own `schema.json`, `site.json` and
+ * `pages/*.json` from a branch and writes all changes of one edit as a single commit. Writes are only ever allowed
+ * to `site.json` and `pages/<slug>.json` under the site's content root (never to the schema or code).
  */
 
 export interface RepoConfig {
@@ -14,6 +17,8 @@ export interface RepoConfig {
 export interface ContentSnapshot {
   /** Commit the snapshot was read from (used to detect concurrent changes when committing). */
   headSha: string;
+  /** The content schema the site publishes (ADR-013); every write is validated against it. */
+  schema: SiteSchema;
   site: unknown;
   pages: Record<string, unknown>;
 }
@@ -25,6 +30,14 @@ export interface ContentChange {
 }
 
 export type GitHubErrorCode = "not_found" | "conflict" | "unauthorized" | "upstream" | "nothing_to_undo";
+
+/** The site's repo has no usable content schema (missing or invalid `schema.json`): it cannot be edited. */
+export class SiteSchemaError extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+    this.name = "SiteSchemaError";
+  }
+}
 
 /** Every publish commit starts with this; undo only ever reverts such a commit. */
 export const PUBLISH_PREFIX = "Objava urejevalnika: ";
@@ -158,6 +171,17 @@ export function createGitHubStore(
   return {
     async read(branch) {
       const headSha = await headOf(branch);
+      let schemaText: string;
+      try {
+        schemaText = await readFileAt(contentPath(SCHEMA_FILE), headSha);
+      } catch (e) {
+        if (e instanceof GitHubError && e.code === "not_found") {
+          throw new SiteSchemaError(`${SCHEMA_FILE} is missing in ${cfg.contentRoot}`);
+        }
+        throw e;
+      }
+      const schema = parseSiteSchema(schemaText);
+      if ("error" in schema) throw new SiteSchemaError(schema.error);
       const site = JSON.parse(await readFileAt(contentPath("site.json"), headSha)) as unknown;
       const { data: listing } = await gh<Array<{ name: string; type: string }>>(
         "GET",
@@ -170,7 +194,7 @@ export function createGitHubStore(
           await readFileAt(contentPath(`pages/${entry.name}`), headSha),
         );
       }
-      return { headSha, site, pages };
+      return { headSha, schema, site, pages };
     },
 
     async commit(changes, message, expectedHeadSha) {

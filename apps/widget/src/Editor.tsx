@@ -87,7 +87,7 @@ type Pending = "publish" | "undo" | "discard";
 function errorKey(res: { status: number; error: string }): MessageKey {
   if (res.status === 0) return "networkError";
   if (res.error === "agent_unavailable") return "errAgentUnavailable";
-  if (res.error === "site_not_connected") return "errNotConnected";
+  if (res.error === "site_not_connected" || res.error === "site_schema_invalid") return "errNotConnected";
   if (res.error === "conflict") return "errConflict";
   if (res.error === "nothing_to_undo") return "nothingToUndo";
   if (res.status === 429) return "rateLimited";

@@ -160,6 +160,7 @@ describe("Editor", () => {
   it.each([
     [503, "agent_unavailable", "errAgentUnavailable"],
     [404, "site_not_connected", "errNotConnected"],
+    [503, "site_schema_invalid", "errNotConnected"],
     [409, "conflict", "errConflict"],
     [429, "rate_limited", "rateLimited"],
     [502, "github_unavailable", "errGithub"],

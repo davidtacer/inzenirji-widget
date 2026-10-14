@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-14 09:20 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-14 10:00 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -31,6 +31,11 @@ Conversation with the owner in Slovenian; code and docs in English.
   deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
+- 2026-10-14: owner tested publish + undo on the demo too (main: e8f5026 publish, f7edae4 undo).
+  ADR-013 (owner): every site defines its own blocks; the editor reads the site's `schema.json`. TASK-013 built
+  (PR open, stacked on #12). `schema.json` already on `demo/main` + `demo/dev`. Contract for building new sites:
+  `docs/guides/site-contract.md` — owner wants an export package with all instructions for another agent once the
+  editor is finished: keep that guide complete and current.
 - 2026-10-14 morning: owner merged #8–#11, set `GITHUB_TOKEN` + `ANTHROPIC_API_KEY`, seeded D1 → **full loop Live
   and owner-tested** (edit of the phone number via chat → demo-dev, cost 0,04 €). Owner feedback: the reply said
   "check the test site" before the build had finished → TASK-012 (PR open).
@@ -92,7 +97,9 @@ After the morning test: TASK-008 screenshots of the test site in the chat (Brows
 cost per edit (phase 1), template blocks the owner wants, real client onboarding (own repo per client,
 GitHub App, Workers Paid). Owner asked about using the editor on existing sites
 (inzenirji.si): proposed hybrid — the site reads selected texts/prices from JSON content, design stays in its code
-(pixel-identical, check with before/after screenshots). Latest TASK: 012 · latest ADR: 012.
+(pixel-identical, check with before/after screenshots). Next: TASK-014 GitHub App (owner agreed 2026-10-14). Later: reference
+blocks + image upload from the chat, multilingual sites (content per language). Latest TASK: 014 (planned) ·
+latest ADR: 013.
 
 ## Open items
 - Conversation retention proposed 12 months (owner to confirm); site "notes" + recent-change summary go into TASK-006.

@@ -1,15 +1,19 @@
 # Editing agent (level 1) — `apps/api/src/agent`, `POST /api/sites/:siteId/edit`
 
-Status: **Built** (TASK-006). Needs Worker secrets `ANTHROPIC_API_KEY` and `GITHUB_TOKEN`.
+Status: **Live** on dev (TASK-006, owner-tested 2026-10-14). Per-site schema: TASK-013 (ADR-013).
+Needs Worker secrets `ANTHROPIC_API_KEY` and `GITHUB_TOKEN`.
 
 ## Flow of one message
 1. `POST /api/sites/:siteId/edit {message}` — session of that site; 1–2000 chars; max 30 edits/hour per site.
-2. Read the test branch (`dev_branch`) content at its head SHA.
+2. Read the test branch (`dev_branch`) at its head SHA: the site's own `schema.json` (ADR-013, parsed by
+   `content/site-schema.ts`; missing/invalid → `503 site_schema_invalid`, reason logged), `site.json`, `pages/*.json`.
 3. `runEdit` (`agent.ts`): Claude (Messages API, `EDIT_MODEL`, default `claude-sonnet-5-5`) gets the rules, the
-   site/page JSON Schemas (from `@inzenirji/site-schema`), the page list, the last 5 edits of the site (request →
+   site's own `notes` and site/page JSON Schemas from its `schema.json` (the editor knows no block types), the page list, the last 5 edits of the site (request →
    reply) and the owner's message; system prompt and tools are prompt-cached.
 4. Tools: `list_pages`, `read_page`, `read_site`, `write_page` (complete page JSON), `write_site`, `delete_page`
-   (not `index`), `escalate`. Every write is validated with zod; errors go back to the model to fix. The model
+   (not `index`), `escalate`. Every write is validated against the site's schema with `@cfworker/json-schema`
+   (no `eval`, Workers-safe; ~0.5 ms per page); errors are reduced to the block kind that was written
+   (`issues()`) and go back to the model to fix. Page slugs: lowercase/digits/hyphens, not `uredi`. The model
    only ever changes an in-memory copy. Max 10 model calls; `max_tokens`/refusal/too many steps → no changes.
 5. Changed files (key-order-independent comparison) become one commit on the test branch,
    message `Urejevalnik: <first line of the request>`; the store refuses if the branch moved meanwhile (409).

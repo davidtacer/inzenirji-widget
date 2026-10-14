@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { demoHome, demoMenu, demoSite } from "../testing/fixtures.ts";
+import { parseSiteSchema, type SiteSchema } from "../content/site-schema.ts";
+import { demoHome, demoMenu, demoSchema, demoSite } from "../testing/fixtures.ts";
 import { MAX_STEPS, runEdit, systemPrompt, TOOLS } from "./agent.ts";
 import type { CallModel, ContentBlock, ModelRequest, ModelResponse } from "./claude.ts";
 import { costMicros, priceCents } from "./pricing.ts";
 
-const snapshot = { headSha: "abc", site: demoSite, pages: { index: demoHome, meni: demoMenu } };
+const snapshot = {
+  headSha: "abc",
+  schema: demoSchema,
+  site: demoSite,
+  pages: { index: demoHome, meni: demoMenu },
+};
 const usage = { input: 1000, output: 200, cacheRead: 0, cacheWrite: 0 };
 let n = 0;
 const tool = (name: string, input: Record<string, unknown> = {}): ContentBlock => ({
@@ -128,9 +134,9 @@ describe("runEdit", () => {
   });
 
   it.each([
-    ["uredi", "reserved"],
-    ["../hack", "Slug"],
-    ["Velike", "Slug"],
+    ["uredi", '(not "uredi")'],
+    ["../hack", "lowercase letters"],
+    ["Velike", "lowercase letters"],
   ])("rejects page slug %j", async (slug, msg) => {
     const page = { ...demoMenu, slug };
     const m = scripted(toolStep(tool("write_page", { page })), (req) => {
@@ -206,8 +212,10 @@ describe("runEdit", () => {
     const req = m.requests[0]!;
     expect(req.model).toBe("claude-sonnet-5-5");
     expect(req.tools).toEqual(TOOLS);
-    expect(req.system).toBe(systemPrompt("Gostilna Pri Lipi"));
+    expect(req.system).toBe(systemPrompt("Gostilna Pri Lipi", demoSchema));
     expect(req.system).toContain("priceCents");
+    expect(req.system).toContain(demoSchema.notes); // the site's own rules
+    expect(req.system).toContain("6,50 € is 650"); // field description from the site's zod schema
     const msg = req.messages[0]!.content as string;
     expect(msg).toContain("Dodaj ajdove žgance");
     expect(msg).toContain('"Nova cena" → Spremenjeno.');
@@ -248,5 +256,121 @@ describe("pricing", () => {
     [27_600, 3, 9],
   ])("price of %i micro-euros × %i = %i cents", (cost, margin, cents) => {
     expect(priceCents(cost, margin)).toBe(cents);
+  });
+});
+
+describe("runEdit on a site with its own blocks (ADR-013)", () => {
+  // A studio site whose developers designed a "timeline" block; it has nothing from the demo template.
+  const studioSchema = parseSiteSchema(
+    JSON.stringify({
+      version: 1,
+      notes: "Letnice so štirimestne. Besedila v angleščini ne prevajaj.",
+      site: {
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
+        additionalProperties: false,
+      },
+      page: {
+        type: "object",
+        properties: {
+          slug: { type: "string" },
+          title: { type: "string" },
+          sections: {
+            type: "array",
+            items: {
+              oneOf: [
+                {
+                  type: "object",
+                  properties: {
+                    type: { const: "timeline" },
+                    events: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          year: { type: "integer", minimum: 1900, maximum: 2100 },
+                          text: { type: "string" },
+                        },
+                        required: ["year", "text"],
+                        additionalProperties: false,
+                      },
+                    },
+                  },
+                  required: ["type", "events"],
+                  additionalProperties: false,
+                },
+              ],
+            },
+          },
+        },
+        required: ["slug", "title", "sections"],
+        additionalProperties: false,
+      },
+    }),
+  ) as SiteSchema;
+  const studio = {
+    headSha: "s1",
+    schema: studioSchema,
+    site: { name: "Studio Lipa" },
+    pages: {
+      index: {
+        slug: "index",
+        title: "Studio",
+        sections: [{ type: "timeline", events: [{ year: 2019, text: "Začetek" }] }],
+      },
+    },
+  };
+
+  it("edits the site's own block and rejects blocks the site does not have", async () => {
+    const updated = {
+      slug: "index",
+      title: "Studio",
+      sections: [
+        {
+          type: "timeline",
+          events: [
+            { year: 2019, text: "Začetek" },
+            { year: 2024, text: "Nov atelje" },
+          ],
+        },
+      ],
+    };
+    const m = scripted(
+      toolStep(
+        tool("write_page", {
+          page: { ...updated, sections: [{ type: "menu", heading: "Meni", groups: [] }] },
+        }),
+      ),
+      (req) => {
+        expect(lastToolResults(req)[0]!.is_error).toBe(true);
+        return toolStep(
+          tool("write_page", {
+            page: { ...updated, sections: [{ type: "timeline", events: [{ year: 24, text: "x" }] }] },
+          }),
+        );
+      },
+      (req) => {
+        expect(lastToolResults(req)[0]!.content).toContain("sections.0.events.0.year");
+        return toolStep(tool("write_page", { page: updated }));
+      },
+      (req) => {
+        expect(lastToolResults(req)[0]!.content).toBe("ok");
+        return final("Dodal sem leto 2024.");
+      },
+    );
+    const res = await runEdit(
+      { snapshot: studio, request: "Dodaj 2024 nov atelje", history: [] },
+      m.call,
+      "claude-sonnet-5-5",
+    );
+    expect(res.changes).toEqual([
+      { path: "pages/index.json", content: `${JSON.stringify(updated, null, 2)}\n` },
+    ]);
+    const system = m.requests[0]!.system;
+    expect(system).toContain('"Studio Lipa"');
+    expect(system).toContain("Letnice so štirimestne.");
+    expect(system).toContain('"timeline"');
+    expect(system).not.toContain("priceCents"); // nothing from the demo template
   });
 });
