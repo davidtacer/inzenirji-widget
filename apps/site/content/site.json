@@ -5,67 +5,24 @@
   "url": "https://demo.inzenirji.si",
   "lang": "sl",
   "contact": {
-    "phone": "040 221 221",
+    "phone": "02 123 45 67",
     "email": "pozdrav@prilipi.example",
     "address": "Lipova ulica 1, 2000 Maribor"
   },
   "hours": [
-    {
-      "days": [
-        "tor",
-        "sre",
-        "čet",
-        "pet"
-      ],
-      "open": "11:00",
-      "close": "22:00"
-    },
-    {
-      "days": [
-        "sob"
-      ],
-      "open": "11:00",
-      "close": "23:00"
-    },
-    {
-      "days": [
-        "ned"
-      ],
-      "open": "11:00",
-      "close": "16:00"
-    },
-    {
-      "days": [
-        "pon"
-      ],
-      "closed": true
-    }
+    { "days": ["tor", "sre", "čet", "pet"], "open": "11:00", "close": "22:00" },
+    { "days": ["sob"], "open": "11:00", "close": "23:00" },
+    { "days": ["ned"], "open": "11:00", "close": "16:00" },
+    { "days": ["pon"], "closed": true }
   ],
   "navigation": [
-    {
-      "label": "Domov",
-      "href": "/"
-    },
-    {
-      "label": "Meni",
-      "href": "/meni"
-    },
-    {
-      "label": "O nas",
-      "href": "/o-nas"
-    },
-    {
-      "label": "Kontakt",
-      "href": "/#kontakt"
-    }
+    { "label": "Domov", "href": "/" },
+    { "label": "Meni", "href": "/meni" },
+    { "label": "O nas", "href": "/o-nas" },
+    { "label": "Kontakt", "href": "/#kontakt" }
   ],
   "theme": {
-    "colors": {
-      "primary": "#3f5b3a",
-      "background": "#fbf8f2",
-      "text": "#2a2722",
-      "accent": "#c8793b"
-    },
+    "colors": { "primary": "#3f5b3a", "background": "#fbf8f2", "text": "#2a2722", "accent": "#c8793b" },
     "fonts": {
       "heading": "Georgia, 'Times New Roman', serif",
       "body": "system-ui, -apple-system, 'Segoe UI', sans-serif"
