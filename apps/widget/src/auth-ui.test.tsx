@@ -77,7 +77,10 @@ function setup(opts: { stored?: StoredSession; api?: Partial<AuthApi>; search?: 
       },
     }),
     edit: async () => ({ ok: false as const, status: 503, error: "agent_unavailable" }),
-    publish: async () => ({ ok: true as const, value: { published: false, sha: null, liveUrl: "https://x" } }),
+    publish: async () => ({
+      ok: true as const,
+      value: { published: false, sha: null, liveUrl: "https://x" },
+    }),
     undo: async () => ({ ok: true as const, value: { undone: true, sha: "m", liveUrl: "https://x" } }),
     discard: async () => ({ ok: true as const, value: { discarded: true } }),
   });
