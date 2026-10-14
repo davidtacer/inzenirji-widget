@@ -108,6 +108,9 @@ fiscal verification), then live keys + live webhook per `docs/runbooks/stripe.md
 - Confirm conversation retention (proposed 12 months).
 
 ## Parked ideas
+- Content freshness watcher (owner, 2026-10-14): daily check of each site, email on expired promotions and
+  upcoming holidays, "Uredi zdaj" button with a pre-filled request. Spec: `docs/01-PRODUCT-SPEC.md`. Add
+  `validFrom` / `validUntil` to dated blocks in the content schema early.
 - npm wrapper package around the embed script (ADR-002) if a non-template site ever needs it.
 
 ## Next
