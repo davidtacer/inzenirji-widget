@@ -66,6 +66,7 @@ describe("POST /api/sites/:siteId/edit", () => {
     expect(await res.json()).toEqual({
       reply: "Cena je zdaj 6,50 €.",
       changed: true,
+      commitSha: t.gh.refs.get("demo/dev"), // the widget waits for this commit's test-site build
       files: ["pages/meni.json"],
       escalated: false,
       previewUrl: "https://demo-dev.inzenirji.si",
@@ -110,6 +111,7 @@ describe("POST /api/sites/:siteId/edit", () => {
     const body = await (await t.edit({ message: "spremeni ceno" })).json();
     expect(body).toMatchObject({
       changed: false,
+      commitSha: null,
       files: [],
       reply: "Katero ceno mislite?",
       costMicros: 27_600,

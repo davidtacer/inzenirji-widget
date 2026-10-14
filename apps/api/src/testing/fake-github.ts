@@ -13,6 +13,11 @@ export class FakeGitHub {
   trees = new Map<string, Tree>();
   commits = new Map<string, Commit>();
   refs = new Map<string, string>();
+  /** "Deploy site" check run per commit sha (no entry → no run yet). */
+  checkRuns = new Map<
+    string,
+    { status: "queued" | "in_progress" | "completed"; conclusion: string | null }
+  >();
   requests: Array<{ method: string; path: string }> = [];
   private n = 0;
   /** Set to a status to make the next matching request fail (e.g. simulate a concurrent push). */
@@ -180,8 +185,10 @@ export class FakeGitHub {
         .map((filename) => ({ filename }));
       return this.json(200, { files });
     }
-    if (method === "GET" && /^\/commits\/\w+\/check-runs$/.test(path)) {
-      return this.json(200, { check_runs: [] });
+    m = method === "GET" ? path.match(/^\/commits\/(\w+)\/check-runs$/) : null;
+    if (m) {
+      const run = this.checkRuns.get(m[1] as string);
+      return this.json(200, { check_runs: run ? [{ name: "Deploy site", ...run }] : [] });
     }
     return this.json(404, { message: `fake: no route ${method} ${path}` });
   };

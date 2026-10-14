@@ -65,24 +65,49 @@ describe("access", () => {
 });
 
 describe("status, publish, undo, discard", () => {
-  it("status shows unpublished changes and the site URLs", async () => {
+  it("status shows unpublished changes, the deployed commit and build of each site, and the URLs", async () => {
     const t = await setup();
     t.draft(650);
+    const devSha = t.gh.refs.get("demo/dev") as string;
+    const mainSha = t.gh.refs.get("demo/main") as string;
+    t.gh.checkRuns.set(mainSha, { status: "completed", conclusion: "success" });
     const res = await t.call("GET", "demo/status");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       unpublished: 1,
-      previewBuild: "pending",
+      previewSha: devSha,
+      previewBuild: "pending", // no run for the new commit yet
+      liveSha: mainSha,
+      liveBuild: "success",
       previewUrl: "https://demo-dev.inzenirji.si",
       liveUrl: "https://demo.inzenirji.si",
     });
+  });
+
+  it.each([
+    [{ status: "queued", conclusion: null }, "pending"],
+    [{ status: "in_progress", conclusion: null }, "pending"],
+    [{ status: "completed", conclusion: "success" }, "success"],
+    [{ status: "completed", conclusion: "failure" }, "failure"],
+    [{ status: "completed", conclusion: "cancelled" }, "failure"],
+  ] as const)("test site build %o → %s", async (run, expected) => {
+    const t = await setup();
+    t.draft(650);
+    t.gh.checkRuns.set(t.gh.refs.get("demo/dev") as string, run);
+    expect(
+      ((await (await t.call("GET", "demo/status")).json()) as { previewBuild: string }).previewBuild,
+    ).toBe(expected);
   });
 
   it("publish merges into the live branch and logs who did it", async () => {
     const t = await setup();
     t.draft(650);
     const res = await t.call("POST", "demo/publish");
-    expect(await res.json()).toEqual({ published: true, liveUrl: DEMO.origin });
+    expect(await res.json()).toEqual({
+      published: true,
+      sha: t.gh.refs.get("demo/main"),
+      liveUrl: DEMO.origin,
+    });
     expect(t.gh.commits.get(t.gh.refs.get("demo/main") as string)?.message).toMatch(
       new RegExp(`^${PUBLISH_PREFIX}`),
     );
@@ -95,6 +120,7 @@ describe("status, publish, undo, discard", () => {
     const t = await setup();
     expect(await (await t.call("POST", "demo/publish")).json()).toEqual({
       published: false,
+      sha: null,
       liveUrl: DEMO.origin,
     });
     expect(t.log()).toEqual([]);

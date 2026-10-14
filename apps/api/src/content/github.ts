@@ -61,10 +61,19 @@ export interface GitHubContentStore {
   publish(message: string): Promise<{ merged: boolean; sha: string | null }>;
   undoLastPublish(): Promise<{ sha: string; revertedMessage: string }>;
   discardDraft(): Promise<string>;
-  status(): Promise<{ unpublished: number; devSha: string; mainSha: string; previewBuild: BuildState }>;
+  status(): Promise<{
+    unpublished: number;
+    devSha: string;
+    mainSha: string;
+    previewBuild: BuildState;
+    liveBuild: BuildState;
+  }>;
 }
 
 export type BuildState = "pending" | "success" | "failure" | "unknown";
+
+/** Name of the job that builds and deploys a client site (workflow in the site repo). */
+export const DEPLOY_CHECK = "Deploy site";
 
 export function createGitHubStore(
   cfg: RepoConfig,
@@ -127,6 +136,24 @@ export function createGitHubStore(
     );
     return decodeBase64Utf8(data.content);
   }
+
+  /**
+   * State of the "Deploy site" check run for a commit (the workflow that builds and deploys the site). The run
+   * finishes only after the deploy and its smoke test, so "success" means the commit is what the site serves.
+   * No run yet → "pending" (the workflow starts a few seconds after the push).
+   */
+  const buildState = async (sha: string): Promise<BuildState> => {
+    try {
+      const { data } = await gh<{
+        check_runs: Array<{ name: string; status: string; conclusion: string | null }>;
+      }>("GET", `/commits/${sha}/check-runs?check_name=${encodeURIComponent(DEPLOY_CHECK)}`);
+      const run = data.check_runs[0];
+      if (run?.status !== "completed") return "pending";
+      return run.conclusion === "success" ? "success" : "failure";
+    } catch {
+      return "unknown";
+    }
+  };
 
   return {
     async read(branch) {
@@ -221,23 +248,12 @@ export function createGitHubStore(
 
     async status() {
       const [devSha, mainSha] = await Promise.all([headOf(cfg.devBranch), headOf(cfg.mainBranch)]);
-      const unpublished = await changedContentFiles(mainSha, devSha);
-      let previewBuild: BuildState = "unknown";
-      try {
-        const { data: runs } = await gh<{
-          check_runs: Array<{ name: string; status: string; conclusion: string | null }>;
-        }>("GET", `/commits/${devSha}/check-runs?check_name=${encodeURIComponent("Deploy site")}`);
-        const run = runs.check_runs[0];
-        if (run) {
-          previewBuild =
-            run.status !== "completed" ? "pending" : run.conclusion === "success" ? "success" : "failure";
-        } else {
-          previewBuild = "pending";
-        }
-      } catch {
-        previewBuild = "unknown";
-      }
-      return { unpublished, devSha, mainSha, previewBuild };
+      const [unpublished, previewBuild, liveBuild] = await Promise.all([
+        changedContentFiles(mainSha, devSha),
+        buildState(devSha),
+        buildState(mainSha),
+      ]);
+      return { unpublished, devSha, mainSha, previewBuild, liveBuild };
     },
   };
 }

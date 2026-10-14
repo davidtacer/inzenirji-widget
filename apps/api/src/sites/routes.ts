@@ -135,7 +135,10 @@ export function siteRoutes(deps: SiteRouteDeps) {
       const s = await ctx.store.status();
       return c.json({
         unpublished: s.unpublished,
+        previewSha: s.devSha,
         previewBuild: s.previewBuild,
+        liveSha: s.mainSha,
+        liveBuild: s.liveBuild,
         previewUrl: ctx.repo.previewUrl,
         liveUrl: ctx.repo.liveUrl,
       });
@@ -158,7 +161,7 @@ export function siteRoutes(deps: SiteRouteDeps) {
           at: deps.now(),
         });
       }
-      return c.json({ published: res.merged, liveUrl: ctx.repo.liveUrl });
+      return c.json({ published: res.merged, sha: res.sha, liveUrl: ctx.repo.liveUrl });
     } catch (e) {
       return githubErrorResponse(c, e);
     }
@@ -176,7 +179,7 @@ export function siteRoutes(deps: SiteRouteDeps) {
         commitSha: res.sha,
         at: deps.now(),
       });
-      return c.json({ undone: true, liveUrl: ctx.repo.liveUrl });
+      return c.json({ undone: true, sha: res.sha, liveUrl: ctx.repo.liveUrl });
     } catch (e) {
       return githubErrorResponse(c, e);
     }
@@ -293,6 +296,7 @@ export function siteRoutes(deps: SiteRouteDeps) {
     return c.json({
       reply: result.reply,
       changed: commitSha !== null,
+      commitSha,
       files: result.changes.map((ch) => ch.path),
       escalated: result.escalated,
       previewUrl: ctx.repo.previewUrl,
