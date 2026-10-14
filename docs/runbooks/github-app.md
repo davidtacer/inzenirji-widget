@@ -20,6 +20,32 @@ No personal tokens of clients. Code: `apps/api/src/content/github-app.ts`; selec
 8. **Install App** (left menu) → your account → **Only select repositories** → `inzenirji-widget` (the demo site
    lives there) → Install.
 
+## App page (as set up 2026-10-14)
+- Name `Inzenirji urejevalnik` (slug `inzenirji-urejevalnik`; renaming changes the public link), App ID 5312521,
+  public install link `https://github.com/apps/inzenirji-urejevalnik`, public (installable by any account).
+- Webhook off, no OAuth during installation, no device flow, no callback/setup URL.
+- Logo: `docs/assets/github-app-logo.png` (512×512, green "I_" on black, brand colours), badge colour `000000`.
+- Description (Markdown):
+
+```markdown
+**Urejevalnik spletnih strani Inženirji.si**
+
+Vsebino svoje spletne strani urejate sami – v pogovoru, v slovenščini. Napišete na primer »Bučna juha naj stane 6,50 €«, urejevalnik spremembo pripravi na skriti testni strani, vi pa jo pregledate in z enim klikom objavite. Vsako objavo lahko razveljavite.
+
+**Do česa ima dostop**
+- Samo do repozitorijev, ki jih izberete ob namestitvi. Izberite samo repozitorij svoje spletne strani.
+- Zapisuje izključno datoteke z vsebino strani (besedila, cene, podatke). Kode in dizajna strani ne spreminja.
+- Bere stanje objave, da vam pokaže, kdaj je sprememba vidna.
+
+**Česa ne počne**
+- Ne dostopa do drugih repozitorijev, nastavitev računa, skrivnosti ali članov.
+- Ne zbira podatkov obiskovalcev vaše strani.
+
+Namestitev lahko kadarkoli odstranite: GitHub → Settings → Applications.
+
+Vprašanja: hello@inzenirji.si · [inzenirji.si](https://inzenirji.si)
+```
+
 ## Give the keys to the editor (owner)
 Cloudflare → Workers & Pages → `inzenirji-editor-dev` (later also production) → Settings → Variables and Secrets →
 Add, type **Secret**:
