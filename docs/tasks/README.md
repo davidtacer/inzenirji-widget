@@ -11,7 +11,7 @@
 | TASK-006 | Agent loop level 1: tools over JSON, schema validation, step limits, cost metering (micro-euros) | 005 | Done — Live (PR #10) |
 | TASK-007 | Widget chat UI: send, show result, test-site link, price, Publish, Undo | 004b, 006 | Done — Live, owner-tested (PR #11) |
 | TASK-008 | Screenshots of preview (desktop + phone) | 005, ADR-009 | Planned |
-| TASK-009 | Payments: Stripe credit, ledger, limits, estimate before send | 006, ADR-014 | Built — PR open; owner sets up Stripe test mode |
+| TASK-009 | Payments: Stripe credit, ledger, limits, estimate before send | 006, ADR-014 | Done — Live in test mode, owner-tested (PR #18) |
 | TASK-010 | Level 2 via Managed Agents | 006 | Planned (phase 4) |
 | TASK-011 | Site template (phase 0) + demo client site | 002 | Done — Live (PR #8) |
 | TASK-012 | Chat shows deploy progress; "done" only when the site serves the change | 007 | Built — PR #12 |

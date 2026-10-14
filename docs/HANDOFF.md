@@ -31,6 +31,8 @@ Conversation with the owner in Slovenian; code and docs in English.
   deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
+- 2026-10-14 15:27: **Stripe test mode live on dev, owner-tested** (secrets set, webhook endpoint, test payment
+  credited). TASK-009 done. Before live mode: accountant (invoices, VAT on prepayments, fiscal verification).
 - 2026-10-14 11:03: owner tested images live (hero image replaced via chat; committed by the app with the PNG).
 - 2026-10-14: ADR-014 prepaid credit (owner: margin ×3, packages 10/25/50 €, seller David Tacer s.p., prices
   with 22 % VAT); TASK-009 built (PR open). Owner: Stripe test mode per `docs/runbooks/stripe.md`.
@@ -95,10 +97,8 @@ Conversation with the owner in Slovenian; code and docs in English.
 
 ### GitHub App (TASK-014) — done; left: delete Worker secret `GITHUB_TOKEN` and revoke the fine-grained token.
 
-### Stripe (TASK-009) — after merging its PR
-`docs/runbooks/stripe.md`: test-mode secret key + webhook endpoint → Worker secrets `STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET`; test with card 4242…; ask the accountant about invoices, VAT on prepayments, fiscal
-verification before live mode.
+### Stripe (TASK-009) — test mode done; before live mode ask the accountant (invoices, VAT on prepayments,
+fiscal verification), then live keys + live webhook per `docs/runbooks/stripe.md`.
 
 ### Still open
 - Delete branch `docs/foundation` (contained in PR #1).
