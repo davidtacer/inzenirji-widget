@@ -31,6 +31,8 @@ Conversation with the owner in Slovenian; code and docs in English.
   deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
+- 2026-10-14: owner merged #12 + #13 and tested (deploy progress + per-site schema work live). TASK-014 GitHub App
+  built (PR open); owner creates the app per `docs/runbooks/github-app.md`.
 - 2026-10-14: owner tested publish + undo on the demo too (main: e8f5026 publish, f7edae4 undo).
   ADR-013 (owner): every site defines its own blocks; the editor reads the site's `schema.json`. TASK-013 built
   (PR open, stacked on #12). `schema.json` already on `demo/main` + `demo/dev`. Contract for building new sites:
@@ -81,6 +83,10 @@ Conversation with the owner in Slovenian; code and docs in English.
    "Testna stran · pripravljena" (1–2 min) → check https://demo-dev.inzenirji.si/meni → "Objavi v živo" →
    https://demo.inzenirji.si/meni after 1–2 min → try "Razveljavi zadnjo objavo".
    If an edit fails with a Cloudflare CPU-limit error (1102), switch the account to Workers Paid (ADR-009).
+
+### GitHub App (TASK-014) — after merging its PR
+Follow `docs/runbooks/github-app.md`: create the app, install it on `inzenirji-widget`, set Worker secrets
+`GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`, test an edit on the demo, then delete `GITHUB_TOKEN` and revoke it.
 
 ### Still open
 - Delete branch `docs/foundation` (contained in PR #1).

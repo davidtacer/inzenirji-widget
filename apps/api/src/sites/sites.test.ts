@@ -1,16 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.ts";
-import { createGitHubStore, PUBLISH_PREFIX } from "../content/github.ts";
+import { createGitHubStore, GitHubError, PUBLISH_PREFIX } from "../content/github.ts";
 import { contentFixture, DEMO, OTHER, ROOT, T0 } from "../testing/fixtures.ts";
 
-async function setup(opts: { noStore?: boolean } = {}) {
+async function setup(opts: { noStore?: boolean; token?: () => Promise<string> } = {}) {
   const f = await contentFixture();
   const app = createApp({
     version: "test",
     sites: {
       db: f.db,
       now: () => T0,
-      storeFor: (repo) => (opts.noStore ? null : createGitHubStore(repo, f.gh.token, f.gh.fetch)),
+      storeFor: (repo) =>
+        opts.noStore ? null : createGitHubStore(repo, opts.token ?? f.gh.token, f.gh.fetch),
     },
   });
   const call = (method: string, path: string, token: string | null = f.session) =>
@@ -31,6 +32,28 @@ async function setup(opts: { noStore?: boolean } = {}) {
     }>;
   return { ...f, call, draft, log };
 }
+
+describe("GitHub App (TASK-014)", () => {
+  it("works with an installation token fetched per request", async () => {
+    let token = "";
+    const t = await setup({ token: async () => token });
+    token = t.gh.token;
+    expect((await t.call("GET", "demo/status")).status).toBe(200);
+  });
+
+  it("app not installed on the site's repo → 503 github_not_installed", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const t = await setup({
+      token: async () => {
+        throw new GitHubError("not_installed", 404, "x");
+      },
+    });
+    const res = await t.call("GET", "demo/status");
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "github_not_installed" });
+    vi.restoreAllMocks();
+  });
+});
 
 describe("access", () => {
   it("needs a session", async () => {

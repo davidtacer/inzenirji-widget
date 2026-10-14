@@ -125,6 +125,7 @@ export function githubErrorResponse(c: Context, e: unknown): Response {
     console.error("[sites] github error:", e.code, e.status);
     if (e.code === "conflict") return c.json<ErrorResponse>({ error: "conflict" }, 409);
     if (e.code === "nothing_to_undo") return c.json<ErrorResponse>({ error: "nothing_to_undo" }, 409);
+    if (e.code === "not_installed") return c.json<ErrorResponse>({ error: "github_not_installed" }, 503);
     return c.json<ErrorResponse>({ error: "github_unavailable" }, 502);
   }
   throw e;

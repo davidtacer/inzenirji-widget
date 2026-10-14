@@ -1,7 +1,8 @@
 import { anthropicCaller } from "./agent/claude.ts";
 import { isKnownModel } from "./agent/pricing.ts";
 import { configFromEnv, createApp } from "./app.ts";
-import { createGitHubStore } from "./content/github.ts";
+import { createGitHubStore, GitHubError, type RepoConfig, type TokenSource } from "./content/github.ts";
+import { createAppAuth, type GitHubAppAuth } from "./content/github-app.ts";
 import type { Db } from "./db.ts";
 import { consoleMailer, type Mailer, smtpMailer } from "./mailer.ts";
 
@@ -25,6 +26,10 @@ export interface WorkerEnv {
    * for this repo, ADR-012). Without it /api/sites/* answers 503 github_unavailable.
    */
   GITHUB_TOKEN?: string;
+  /** Secret: GitHub App ID (TASK-014). With GITHUB_APP_PRIVATE_KEY, sites are accessed through the app. */
+  GITHUB_APP_ID?: string;
+  /** Secret: the GitHub App's private key (.pem contents). */
+  GITHUB_APP_PRIVATE_KEY?: string;
   /** Secret: Anthropic API key for the editing agent. Without it POST /edit answers 503 agent_unavailable. */
   ANTHROPIC_API_KEY?: string;
   /** Model id for edits (default claude-sonnet-5-5). */
@@ -45,6 +50,35 @@ export function agentFromEnv(env: WorkerEnv) {
   const margin = Number(env.PRICE_MARGIN ?? "1");
   if (!apiKey || !isKnownModel(model) || !(usdToEur > 0) || !(margin >= 1)) return null;
   return { callModel: anthropicCaller(apiKey), model, usdToEur, margin };
+}
+
+// One app auth per isolate, so the key import, app JWT and installation tokens are reused across requests.
+let appAuth: { key: string; auth: GitHubAppAuth } | null = null;
+
+/**
+ * How the API reaches a site's repo (TASK-014): through the GitHub App when it is configured; a repo where the app
+ * is not installed falls back to GITHUB_TOKEN if there is one (dev / transition). Null when neither is configured.
+ */
+export function tokenSourceFor(
+  env: Pick<WorkerEnv, "GITHUB_APP_ID" | "GITHUB_APP_PRIVATE_KEY" | "GITHUB_TOKEN">,
+  repo: RepoConfig,
+  makeAuth: typeof createAppAuth = createAppAuth,
+): TokenSource | null {
+  const githubToken = env.GITHUB_TOKEN?.trim() || null;
+  const appId = env.GITHUB_APP_ID?.trim();
+  const privateKey = env.GITHUB_APP_PRIVATE_KEY?.trim();
+  if (!appId || !privateKey) return githubToken;
+  const key = `${appId}:${privateKey.length}:${privateKey.slice(-32)}`;
+  if (appAuth?.key !== key) appAuth = { key, auth: makeAuth({ appId, privateKey }) };
+  const { auth } = appAuth;
+  return async () => {
+    try {
+      return await auth.tokenFor(repo.owner, repo.repo);
+    } catch (e) {
+      if (githubToken && e instanceof GitHubError && e.code === "not_installed") return githubToken;
+      throw e;
+    }
+  };
 }
 
 interface ExecutionContextLike {
@@ -94,13 +128,14 @@ export default {
         : undefined;
     const db = env.DB;
     const agent = agentFromEnv(env);
-    const githubToken = env.GITHUB_TOKEN?.trim();
     const sites = db
       ? {
           db,
           now: () => Date.now(),
-          storeFor: (repo: Parameters<typeof createGitHubStore>[0]) =>
-            githubToken ? createGitHubStore(repo, githubToken) : null,
+          storeFor: (repo: RepoConfig) => {
+            const token = tokenSourceFor(env, repo);
+            return token ? createGitHubStore(repo, token) : null;
+          },
           ...(agent ? { agent } : {}),
         }
       : undefined;
