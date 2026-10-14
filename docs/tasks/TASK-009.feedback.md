@@ -14,5 +14,6 @@
   focus; screenshot reviewed.
 - Deliberate breaks: no credit check → 1 test fails; no signature check → 2 fail; no charging → 3 fail.
 
-## Not verified here
-- Real Stripe (owner sets up test mode, `docs/runbooks/stripe.md`). Tax/invoice/fiscal questions → accountant.
+## Live (2026-10-14 15:27)
+- Owner set up Stripe test mode and the webhook; a test payment was credited in the editor.
+- Open: tax/invoice/fiscal questions → accountant before live mode.

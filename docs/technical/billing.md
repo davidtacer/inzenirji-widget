@@ -1,6 +1,6 @@
 # Billing — prepaid credit (TASK-009, ADR-014)
 
-Status: **Built** (PR open). Needs Worker secrets `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` for top-ups
+Status: **Live on dev in Stripe test mode** (owner-tested 2026-10-14). Needs Worker secrets `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` for top-ups
 (without them editing still works on the credit; `/checkout` answers `503 payments_unavailable`).
 
 - Price of an edit (`agent/pricing.ts`): ⌈cost µ€ × `PRICE_MARGIN` (3) × (1 + `VAT_RATE` 0.22) / 10 000⌉ cents.
