@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ApiResult } from "./api.ts";
 import { type Lang, type MessageKey, t } from "./i18n.ts";
+import { type PreparedUpload, type PrepareUpload, prepareUpload } from "./image-resize.ts";
 import { type BuildState, formatCents, type SiteStatus, type SitesApi } from "./sites-api.ts";
+
+/** Images per message (the API allows the same). */
+export const MAX_ATTACHMENTS = 3;
+
+interface Attachment extends PreparedUpload {
+  id: number;
+  /** Object URL for the thumbnail. */
+  preview: string;
+}
 
 /** Polling interval while a site is being rebuilt. */
 export const STATUS_POLL_MS = 5_000;
@@ -22,7 +32,7 @@ export interface Deploy {
 }
 
 type ChatItem =
-  | { id: number; from: "you"; text: string }
+  | { id: number; from: "you"; text: string; previews?: string[] }
   | {
       id: number;
       from: "editor";
@@ -91,6 +101,10 @@ function errorKey(res: { status: number; error: string }): MessageKey {
     return "errNotConnected";
   if (res.error === "conflict") return "errConflict";
   if (res.error === "nothing_to_undo") return "nothingToUndo";
+  if (res.error === "image_type") return "errImageType";
+  if (res.error === "image_too_large") return "errImageTooLarge";
+  if (res.error === "too_many_images") return "imagesMax";
+  if (res.error === "uploads_not_supported") return "errUploadsNotSupported";
   if (res.status === 429) return "rateLimited";
   if (res.error === "github_unavailable") return "errGithub";
   return "networkError";
@@ -103,6 +117,8 @@ export function Editor(props: {
   onLogout: () => void;
   /** Called when the API says the session is no longer valid. */
   onSessionEnded: () => void;
+  /** Resizes a picked image (injectable for tests; the browser one needs canvas). */
+  prepareUpload?: PrepareUpload;
 }) {
   const { lang, api } = props;
   const [items, setItems] = useState<ChatItem[]>([]);
@@ -111,6 +127,9 @@ export function Editor(props: {
   const [status, setStatus] = useState<SiteStatus | null>(null);
   const [confirm, setConfirm] = useState<Pending | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [preparing, setPreparing] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -161,14 +180,51 @@ export function Editor(props: {
     if (el) el.scrollTop = el.scrollHeight;
   }, [items, busy]);
 
+  const pickImages = async (list: FileList | null) => {
+    const files = [...(list ?? [])];
+    if (fileRef.current) fileRef.current.value = ""; // allow picking the same file again
+    if (!files.length) return;
+    if (attachments.length + files.length > MAX_ATTACHMENTS) {
+      add({ from: "notice", key: "imagesMax", tone: "error" });
+      return;
+    }
+    setPreparing(true);
+    const prepare = props.prepareUpload ?? prepareUpload;
+    for (const file of files) {
+      try {
+        const up = await prepare(file);
+        setAttachments((a) => [...a, { ...up, id: nextId.current++, preview: URL.createObjectURL(up.blob) }]);
+      } catch {
+        add({ from: "notice", key: "imageRead", tone: "error" });
+      }
+    }
+    setPreparing(false);
+  };
+
+  const removeAttachment = (id: number) =>
+    setAttachments((a) => {
+      const gone = a.find((x) => x.id === id);
+      if (gone) URL.revokeObjectURL(gone.preview);
+      return a.filter((x) => x.id !== id);
+    });
+
   const send = async (e?: Event) => {
     e?.preventDefault();
     const message = draft.trim();
-    if (!message || busy) return;
+    if (busy || preparing) return;
+    if (!message) {
+      if (attachments.length) add({ from: "notice", key: "imageHint", tone: "info" });
+      return;
+    }
+    const sent = attachments;
     setDraft("");
-    add({ from: "you", text: message });
+    setAttachments([]);
+    add({ from: "you", text: message, ...(sent.length ? { previews: sent.map((a) => a.preview) } : {}) });
     setBusy(true);
-    const res = await api.edit(message);
+    const res = await api.edit(
+      message,
+      sent.map(({ blob, name }) => ({ blob, name })),
+    );
     setBusy(false);
     if (!res.ok) {
       failed(res);
@@ -327,6 +383,13 @@ export function Editor(props: {
           ) : (
             <div key={item.id} class={`bubble ${item.from}`}>
               <span class="sender">{t(lang, item.from === "you" ? "you" : "editor")}</span>
+              {item.from === "you" && item.previews && (
+                <div class="thumbs">
+                  {item.previews.map((src) => (
+                    <img key={src} src={src} alt="" />
+                  ))}
+                </div>
+              )}
               <p>{item.text}</p>
               {item.from === "editor" && item.deploy && (
                 <DeployLine lang={lang} deploy={item.deploy} kind="edit" now={now} url={status?.previewUrl} />
@@ -352,24 +415,67 @@ export function Editor(props: {
       </div>
 
       <form class="composer" onSubmit={send}>
-        <label for="message" class="visually-hidden">
-          {t(lang, "messageLabel")}
-        </label>
-        <textarea
-          id="message"
-          rows={2}
-          value={draft}
-          placeholder={t(lang, "messageLabel")}
-          maxLength={2000}
-          onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) void send(e);
-          }}
-          disabled={busy}
-        />
-        <button type="submit" class="button primary" disabled={busy || !draft.trim()}>
-          {t(lang, "send")}
-        </button>
+        {(attachments.length > 0 || preparing) && (
+          <div class="attachments">
+            {attachments.map((a) => (
+              <span class="attachment" key={a.id}>
+                <img src={a.preview} alt="" />
+                <button
+                  type="button"
+                  class="remove"
+                  aria-label={t(lang, "removeImage")}
+                  onClick={() => removeAttachment(a.id)}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            {preparing && <span class="spinner" aria-hidden="true" />}
+          </div>
+        )}
+        <div class="composer-row">
+          <input
+            ref={fileRef}
+            id="image-input"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            multiple
+            class="visually-hidden"
+            onChange={(e) => void pickImages((e.target as HTMLInputElement).files)}
+            disabled={busy || attachments.length >= MAX_ATTACHMENTS}
+          />
+          <label
+            for="image-input"
+            class={`button attach${busy || attachments.length >= MAX_ATTACHMENTS ? " disabled" : ""}`}
+            title={t(lang, "attachImage")}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"
+              />
+            </svg>
+            <span class="visually-hidden">{t(lang, "attachImage")}</span>
+          </label>
+          <label for="message" class="visually-hidden">
+            {t(lang, "messageLabel")}
+          </label>
+          <textarea
+            id="message"
+            rows={2}
+            value={draft}
+            placeholder={t(lang, "messageLabel")}
+            maxLength={2000}
+            onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) void send(e);
+            }}
+            disabled={busy}
+          />
+          <button type="submit" class="button primary" disabled={busy || preparing || !draft.trim()}>
+            {t(lang, "send")}
+          </button>
+        </div>
       </form>
     </div>
   );

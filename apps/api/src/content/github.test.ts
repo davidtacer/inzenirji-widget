@@ -105,6 +105,38 @@ describe("read", () => {
     expect((err as SiteSchemaError).reason).toContain(reason);
   });
 
+  it("commits uploaded images as binary blobs in the same commit, only inside the uploads folder", async () => {
+    const { store, gh } = setup();
+    const head = gh.refs.get("demo/dev") as string;
+    const dir = "apps/site/public/uploads";
+    const sha = await store.commit([{ path: "pages/meni.json", content: '{"slug":"meni"}' }], "slika", head, {
+      dir,
+      files: [{ repoPath: `${dir}/2026-10-terasa-0a1b2c3d.jpg`, base64: "/9j/4AAQ" }],
+    });
+    const files = gh.filesAt(sha);
+    expect(files[`${dir}/2026-10-terasa-0a1b2c3d.jpg`]).toBe("base64:/9j/4AAQ");
+    expect(files[`${ROOT}/pages/meni.json`]).toBe('{"slug":"meni"}');
+    expect(gh.commits.get(sha)?.parents).toEqual([head]);
+  });
+
+  it.each([
+    "apps/site/public/uploads/../../../package.json",
+    "apps/site/public/uploads/sub/x.jpg",
+    "apps/site/public/uploads/x.svg",
+    "apps/site/public/uploads/X.jpg",
+    ".github/workflows/x.jpg",
+    "apps/site/public/x.jpg",
+  ])("refuses an upload outside the folder or with a strange name: %s", async (repoPath) => {
+    const { store, gh } = setup();
+    const head = gh.refs.get("demo/dev") as string;
+    await expect(
+      store.commit([{ path: "site.json", content: "{}" }], "x", head, {
+        dir: "apps/site/public/uploads",
+        files: [{ repoPath, base64: "AAAA" }],
+      }),
+    ).rejects.toThrow("upload path not allowed");
+  });
+
   it("schema.json itself can never be written by the editor", async () => {
     const { store, gh } = setup();
     const head = gh.refs.get("demo/dev") as string;

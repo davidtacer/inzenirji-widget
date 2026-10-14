@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CallModel, ModelResponse } from "../agent/claude.ts";
+import type { CallModel, ContentBlock, ModelRequest, ModelResponse } from "../agent/claude.ts";
 import { ModelError } from "../agent/claude.ts";
 import { createApp } from "../app.ts";
 import { createGitHubStore } from "../content/github.ts";
 import type { FakeGitHub } from "../testing/fake-github.ts";
-import { contentFixture, demoMenu, ROOT, T0 } from "../testing/fixtures.ts";
+import { contentFixture, demoMenu, demoSchemaText, JPEG, PNG, ROOT, SVG, T0 } from "../testing/fixtures.ts";
 import { EDIT_LIMIT_PER_HOUR, MAX_MESSAGE_CHARS } from "./routes.ts";
 
 const usage = { input: 10_000, output: 1_000, cacheRead: 0, cacheWrite: 0 };
@@ -52,10 +52,106 @@ async function setup(opts: { model?: CallModel | null } = {}) {
         "SELECT kind, request, reply, commit_sha, cost_micros, price_cents, input_tokens FROM change_log ORDER BY id",
       )
       .all() as Array<Record<string, unknown>>;
-  return { ...f, edit, log, callModel };
+  const editWithImages = (message: string, images: Array<{ name: string; bytes: Uint8Array }>) => {
+    const form = new FormData();
+    form.set("message", message);
+    for (const img of images) form.append("images", new Blob([img.bytes]), img.name);
+    return app.request("/api/sites/demo/edit", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${f.session}` },
+      body: form,
+    });
+  };
+  return { ...f, edit, editWithImages, log, callModel };
+}
+
+/** Model that puts the first attached image into a new gallery on the menu page. */
+function galleryModel(requests: ModelRequest[]): CallModel {
+  return async (req) => {
+    requests.push(structuredClone(req));
+    if (requests.length === 1) {
+      const first = req.messages[0]?.content as ContentBlock[];
+      const url = (
+        first.find((b) => b.type === "text" && b.text.startsWith("Attached image 1")) as {
+          text: string;
+        }
+      ).text.split(": ")[1] as string;
+      const page = structuredClone(demoMenu) as { blocks: unknown[] };
+      page.blocks.push({
+        type: "gallery",
+        heading: "Terasa",
+        images: [{ src: url, alt: "Terasa z mizami" }],
+      });
+      return {
+        content: [{ type: "tool_use", id: "w1", name: "write_page", input: { page } }],
+        stopReason: "tool_use",
+        usage,
+      };
+    }
+    return { content: [{ type: "text", text: "Dodal sem sliko terase." }], stopReason: "end_turn", usage };
+  };
 }
 
 afterEach(() => vi.restoreAllMocks());
+
+describe("POST /api/sites/:siteId/edit with images (TASK-015)", () => {
+  it("the model sees the image and its URL; the used image is committed with the page in one commit", async () => {
+    const requests: ModelRequest[] = [];
+    const t = await setup({ model: galleryModel(requests) });
+    const res = await t.editWithImages("Dodaj sliko terase na meni", [{ name: "Terasa.jpg", bytes: JPEG }]);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { changed: boolean; images: string[]; commitSha: string };
+    expect(body.changed).toBe(true);
+    expect(body.images).toHaveLength(1);
+    const url = body.images[0] as string;
+    expect(url).toMatch(/^\/uploads\/\d{4}-\d{2}-terasa-[0-9a-f]{8}\.jpg$/);
+
+    const first = requests[0]?.messages[0]?.content as Array<ContentBlock & { cache_control?: unknown }>;
+    const image = first.find((b) => b.type === "image") as Extract<ContentBlock, { type: "image" }>;
+    expect(image.source.media_type).toBe("image/jpeg");
+    expect(Uint8Array.from(atob(image.source.data), (ch) => ch.charCodeAt(0))).toEqual(JPEG);
+    expect(first.at(-1)?.cache_control).toEqual({ type: "ephemeral" }); // not re-billed at full price every step
+
+    const files = t.gh.filesAt(body.commitSha);
+    expect(files[`apps/site/public${url}`]).toBe(`base64:${btoa(String.fromCharCode(...JPEG))}`);
+    expect(files[`${ROOT}/pages/meni.json`]).toContain(url);
+  });
+
+  it("images the model does not use are not committed", async () => {
+    const t = await setup({ model: priceChangingModel() });
+    const res = await t.editWithImages("Bučna juha naj stane 6,50 €", [{ name: "x.png", bytes: PNG }]);
+    const body = (await res.json()) as { images: string[]; commitSha: string };
+    expect(body.images).toEqual([]);
+    expect(Object.keys(t.gh.filesAt(body.commitSha)).some((p) => p.includes("public/uploads"))).toBe(false);
+  });
+
+  it.each([
+    ["an SVG (even named .jpg)", [{ name: "logo.jpg", bytes: SVG }], "image_type"],
+    [
+      "four images",
+      Array.from({ length: 4 }, (_, i) => ({ name: `${i}.jpg`, bytes: JPEG })),
+      "too_many_images",
+    ],
+  ])("refuses %s before calling the model", async (_case, images, error) => {
+    const t = await setup();
+    const res = await t.editWithImages("Dodaj sliko", images);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error });
+    expect(t.callModel).not.toHaveBeenCalled();
+  });
+
+  it("a site whose schema has no uploads folder refuses images", async () => {
+    const t = await setup();
+    const head = t.gh.refs.get("demo/dev") as string;
+    const schema = JSON.parse(demoSchemaText) as Record<string, unknown>;
+    delete schema.uploads;
+    const files = { ...t.gh.filesAt(head), [`${ROOT}/schema.json`]: JSON.stringify(schema) };
+    t.gh.refs.set("demo/dev", t.gh.addCommit(files, [head], "no uploads"));
+    const res = await t.editWithImages("Dodaj sliko", [{ name: "a.jpg", bytes: JPEG }]);
+    expect(await res.json()).toEqual({ error: "uploads_not_supported" });
+    expect(t.callModel).not.toHaveBeenCalled();
+  });
+});
 
 describe("POST /api/sites/:siteId/edit", () => {
   it("a site without its schema.json cannot be edited: 503 site_schema_invalid, no model call, nothing logged", async () => {
@@ -83,6 +179,7 @@ describe("POST /api/sites/:siteId/edit", () => {
       changed: true,
       commitSha: t.gh.refs.get("demo/dev"), // the widget waits for this commit's test-site build
       files: ["pages/meni.json"],
+      images: [],
       escalated: false,
       previewUrl: "https://demo-dev.inzenirji.si",
       costMicros: 55_200,

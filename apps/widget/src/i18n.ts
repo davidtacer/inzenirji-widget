@@ -68,6 +68,14 @@ const sl = {
   deploySlow: "traja dlje kot običajno",
   openPreview: "Odpri testno stran",
   openLive: "Odpri pravo stran",
+  attachImage: "Dodaj sliko",
+  removeImage: "Odstrani sliko",
+  imagesMax: "Na eno sporočilo lahko dodate največ 3 slike.",
+  imageRead: "Te slike ni bilo mogoče prebrati. Poskusite z drugo (JPG, PNG ali WebP).",
+  errImageType: "Te datoteke ni mogoče uporabiti. Pošljite sliko JPG, PNG ali WebP.",
+  errImageTooLarge: "Slika je prevelika.",
+  errUploadsNotSupported: "Na tej strani dodajanje slik še ni mogoče.",
+  imageHint: "Napišite še, kam naj gre slika (npr. »dodaj v galerijo«).",
 } as const;
 
 export type MessageKey = keyof typeof sl;
@@ -139,6 +147,14 @@ const en: Record<MessageKey, string> = {
   deploySlow: "taking longer than usual",
   openPreview: "Open the test site",
   openLive: "Open the live site",
+  attachImage: "Add image",
+  removeImage: "Remove image",
+  imagesMax: "You can add at most 3 images per message.",
+  imageRead: "This image could not be read. Try another one (JPG, PNG or WebP).",
+  errImageType: "This file cannot be used. Send a JPG, PNG or WebP image.",
+  errImageTooLarge: "The image is too large.",
+  errUploadsNotSupported: "Adding images is not available on this site yet.",
+  imageHint: 'Also write where the image should go (e.g. "add to the gallery").',
 };
 
 export const messages: Record<Lang, Record<MessageKey, string>> = { sl, en };

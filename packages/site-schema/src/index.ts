@@ -122,6 +122,23 @@ export const FaqBlock = z.strictObject({
     .max(40),
 });
 
+export const ReferencesBlock = z.strictObject({
+  type: z.literal("references"),
+  heading: text(120),
+  intro: optionalText(300),
+  items: z
+    .array(
+      z.strictObject({
+        name: text(120).describe("Client or project name"),
+        description: optionalText(400),
+        image: Image.optional(),
+        href: Href.optional().describe("Link to the client's site or the project"),
+      }),
+    )
+    .min(1)
+    .max(60),
+});
+
 export const Block = z.discriminatedUnion("type", [
   HeroBlock,
   NoticeBlock,
@@ -132,6 +149,7 @@ export const Block = z.discriminatedUnion("type", [
   HoursBlock,
   ContactBlock,
   FaqBlock,
+  ReferencesBlock,
 ]);
 export type Block = z.infer<typeof Block>;
 export const BLOCK_TYPES = Block.options.map((o) => o.shape.type.value);

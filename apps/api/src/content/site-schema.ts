@@ -13,9 +13,18 @@ export interface SiteSchema {
   site: Record<string, unknown>;
   /** JSON Schema (draft 2020-12) of every `pages/<slug>.json`. */
   page: Record<string, unknown>;
+  /**
+   * Where images uploaded in the chat are stored (TASK-015): `dir` is relative to the repo root, `publicPath` is
+   * the URL path the site serves that folder at. Absent → the site does not accept uploads.
+   */
+  uploads: { dir: string; publicPath: string } | null;
   /** The schema file as committed; used as cache key. */
   text: string;
 }
+
+/** Repo-relative folder: plain segments only (no "..", no hidden folders such as .github). */
+const UPLOAD_DIR = /^(?!.*(?:^|\/)\.)[A-Za-z0-9_-][A-Za-z0-9._-]*(?:\/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$/;
+const PUBLIC_PATH = /^\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*(?:\/[A-Za-z0-9_-][A-Za-z0-9._-]*)*)?$/;
 
 export const SCHEMA_FILE = "schema.json";
 /** The whole schema goes into the agent's prompt on every edit; keep it bounded (cost, CPU). */
@@ -63,13 +72,29 @@ export function parseSiteSchema(text: string): SiteSchema | { error: string } {
       return { error: `schema.json: page schema must require "${field}"` };
     }
   }
+  let uploads: SiteSchema["uploads"] = null;
+  if (raw.uploads !== undefined) {
+    const u = raw.uploads;
+    if (
+      !isObject(u) ||
+      typeof u.dir !== "string" ||
+      typeof u.publicPath !== "string" ||
+      !UPLOAD_DIR.test(u.dir) ||
+      u.dir.split("/").includes("..") ||
+      !PUBLIC_PATH.test(u.publicPath) ||
+      u.publicPath.split("/").includes("..")
+    ) {
+      return { error: 'schema.json: "uploads" must be { dir: "<repo folder>", publicPath: "/<url path>" }' };
+    }
+    uploads = { dir: u.dir, publicPath: u.publicPath.replace(/\/$/, "") };
+  }
   try {
     new Validator(site, "2020-12", false);
     new Validator(page, "2020-12", false);
   } catch {
     return { error: "schema.json: site or page schema cannot be compiled" };
   }
-  return { version: 1, notes, site, page, text };
+  return { version: 1, notes, site, page, uploads, text };
 }
 
 export interface ContentValidator {

@@ -29,6 +29,33 @@ describe("parseSiteSchema", () => {
   });
 });
 
+describe("uploads folder (TASK-015)", () => {
+  const base = {
+    version: 1,
+    site: { type: "object" },
+    page: { type: "object", properties: { slug: {}, title: {} }, required: ["slug", "title"] },
+  };
+  it("demo: public/uploads served at /uploads", () => {
+    expect(demoSchema.uploads).toEqual({ dir: "apps/site/public/uploads", publicPath: "/uploads" });
+  });
+  it("absent → no uploads", () => {
+    expect((parseSiteSchema(JSON.stringify(base)) as { uploads: unknown }).uploads).toBeNull();
+  });
+  it.each([
+    [{ dir: ".github/workflows", publicPath: "/x" }],
+    [{ dir: "public/../.github", publicPath: "/x" }],
+    [{ dir: "../outside", publicPath: "/x" }],
+    [{ dir: "/abs", publicPath: "/x" }],
+    [{ dir: "public/uploads", publicPath: "uploads" }],
+    [{ dir: "public/uploads", publicPath: "/../x" }],
+    [{ dir: "public/.hidden", publicPath: "/x" }],
+  ])("refuses %j", (uploads) => {
+    expect(parseSiteSchema(JSON.stringify({ ...base, uploads }))).toEqual({
+      error: expect.stringContaining('"uploads"'),
+    });
+  });
+});
+
 describe("validatorFor (demo schema)", () => {
   const v = validatorFor(demoSchema);
 

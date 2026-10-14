@@ -88,6 +88,22 @@ export function BlockView({ block, site }: { block: Block; site: Site }) {
           </div>
         </section>
       );
+    case "references":
+      return (
+        <section className="section container">
+          <h2>{block.heading}</h2>
+          {block.intro && <p className="muted">{block.intro}</p>}
+          <ul className="references">
+            {block.items.map((item) => (
+              <li key={item.name}>
+                {item.image && <img src={item.image.src} alt={item.image.alt} loading="lazy" />}
+                <h3>{item.href ? <a href={item.href}>{item.name}</a> : item.name}</h3>
+                {item.description && <p>{item.description}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      );
     case "hours":
       return (
         <section className="section container narrow" id="delovni-cas">

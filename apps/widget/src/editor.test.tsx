@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { act } from "preact/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DEPLOY_SLOW_MS, Editor, STATUS_POLL_MS } from "./Editor.tsx";
+import { DEPLOY_SLOW_MS, Editor, MAX_ATTACHMENTS, STATUS_POLL_MS } from "./Editor.tsx";
 import { t } from "./i18n.ts";
 import type { EditResult, SiteStatus, SitesApi } from "./sites-api.ts";
 import { createSitesApi, formatCents } from "./sites-api.ts";
@@ -43,6 +43,12 @@ const button = (label: string) =>
     | HTMLButtonElement
     | undefined;
 
+/** Stand-in for the canvas resize (happy-dom has no canvas): "resizes" to a 3-byte JPEG. */
+const fakePrepare = vi.fn(async (file: File) => ({
+  blob: new Blob([new Uint8Array([1, 2, 3])]),
+  name: `${file.name}.jpg`,
+}));
+
 async function setup(api: Partial<SitesApi> = {}, initial: SiteStatus = status()) {
   const full: SitesApi = {
     status: vi.fn(async () => ({ ok: true as const, value: initial })),
@@ -70,6 +76,7 @@ async function setup(api: Partial<SitesApi> = {}, initial: SiteStatus = status()
         api={full}
         onLogout={onLogout}
         onSessionEnded={onSessionEnded}
+        prepareUpload={fakePrepare}
       />,
       container,
     ),
@@ -110,7 +117,7 @@ describe("Editor", () => {
     const { api } = await setup();
     await type("  Bučna juha naj stane 6,50 €  ");
     await submit();
-    expect(api.edit).toHaveBeenCalledWith("Bučna juha naj stane 6,50 €");
+    expect(api.edit).toHaveBeenCalledWith("Bučna juha naj stane 6,50 €", []);
     expect(text()).toContain("Bučna juha naj stane 6,50 €");
     expect(text()).toContain("Cena je zdaj 6,50 €.");
     expect(text()).toContain("Strošek: 0,06 €");
@@ -134,7 +141,7 @@ describe("Editor", () => {
       ta.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
     await flush();
-    expect(api.edit).toHaveBeenCalledWith("vrstica");
+    expect(api.edit).toHaveBeenCalledWith("vrstica", []);
   });
 
   it("marks answers without changes and escalations", async () => {
@@ -260,6 +267,82 @@ describe("Editor", () => {
       vi.advanceTimersByTime(STATUS_POLL_MS * 3);
     });
     expect(statusFn).toHaveBeenCalledTimes(2); // no polling once ready
+  });
+});
+
+async function pick(...names: string[]) {
+  const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+  const files = names.map((n) => new File([new Uint8Array([9])], n, { type: "image/jpeg" }));
+  Object.defineProperty(input, "files", { value: files, configurable: true });
+  await act(async () => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await flush();
+}
+
+describe("Editor: images (TASK-015)", () => {
+  it("picked images are resized, shown as thumbnails, and sent with the message", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:${Math.random()}`);
+    const { api } = await setup();
+    await pick("terasa.heic", "vrt.jpg");
+    expect(fakePrepare).toHaveBeenCalledTimes(2);
+    expect(container.querySelectorAll(".attachment img")).toHaveLength(2);
+    await type("Dodaj v galerijo");
+    await submit();
+    const [message, images] = (api.edit as ReturnType<typeof vi.fn>).mock.calls[0] ?? [];
+    expect(message).toBe("Dodaj v galerijo");
+    expect(images.map((i: { name: string }) => i.name)).toEqual(["terasa.heic.jpg", "vrt.jpg.jpg"]);
+    expect(container.querySelectorAll(".attachment")).toHaveLength(0); // composer cleared
+    expect(container.querySelectorAll(".bubble.you .thumbs img")).toHaveLength(2); // shown in the chat
+  });
+
+  it("an image can be removed before sending", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:${Math.random()}`);
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const { api } = await setup();
+    await pick("a.jpg");
+    await act(async () => (container.querySelector(".attachment .remove") as HTMLButtonElement).click());
+    await type("x");
+    await submit();
+    expect(api.edit).toHaveBeenCalledWith("x", []);
+  });
+
+  it(`at most ${MAX_ATTACHMENTS} images`, async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:${Math.random()}`);
+    await setup();
+    await pick("1.jpg", "2.jpg", "3.jpg", "4.jpg");
+    expect(container.querySelectorAll(".attachment")).toHaveLength(0);
+    expect(text()).toContain(t("sl", "imagesMax"));
+  });
+
+  it("an image without text asks where it should go, and sends nothing", async () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:${Math.random()}`);
+    const { api } = await setup();
+    await pick("a.jpg");
+    await submit();
+    expect(api.edit).not.toHaveBeenCalled();
+    expect(text()).toContain(t("sl", "imageHint"));
+  });
+
+  it("an image the browser cannot read gives a message", async () => {
+    fakePrepare.mockRejectedValueOnce(new Error("decode"));
+    await setup();
+    await pick("broken.jpg");
+    expect(text()).toContain(t("sl", "imageRead"));
+    expect(container.querySelectorAll(".attachment")).toHaveLength(0);
+  });
+
+  it.each([
+    ["image_type", "errImageType"],
+    ["image_too_large", "errImageTooLarge"],
+    ["uploads_not_supported", "errUploadsNotSupported"],
+  ] as const)("API %s → message", async (error, key) => {
+    await setup({
+      edit: vi.fn(async () => ({ ok: false as const, status: 400, error })) as SitesApi["edit"],
+    });
+    await type("x");
+    await submit();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(t("sl", key));
   });
 });
 
@@ -432,6 +515,21 @@ describe("createSitesApi", () => {
     expect(init?.method).toBe("POST");
     expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${"S".repeat(43)}`);
     expect(JSON.parse(String(init?.body))).toEqual({ message: "6,50" });
+  });
+
+  it("sends images as multipart/form-data, without a JSON content type", async () => {
+    const f = vi.fn(
+      async (_i: string, _init?: RequestInit) => new Response(JSON.stringify(editOk()), { status: 200 }),
+    );
+    await createSitesApi(f)("demo", "S".repeat(43)).edit("v galerijo", [
+      { blob: new Blob([new Uint8Array([1])]), name: "a.jpg" },
+    ]);
+    const init = f.mock.calls[0]?.[1];
+    expect(init?.body).toBeInstanceOf(FormData);
+    expect(new Headers(init?.headers).get("Content-Type")).toBeNull(); // the browser sets the boundary
+    const form = init?.body as FormData;
+    expect(form.get("message")).toBe("v galerijo");
+    expect((form.getAll("images")[0] as File).name).toBe("a.jpg");
   });
 
   it("maps errors and bad bodies", async () => {

@@ -5,6 +5,11 @@ Needs Worker secrets `ANTHROPIC_API_KEY` and `GITHUB_TOKEN`.
 
 ## Flow of one message
 1. `POST /api/sites/:siteId/edit {message}` — session of that site; 1–2000 chars; max 30 edits/hour per site.
+   With images (TASK-015): `multipart/form-data` with `message` + up to 3 `images` (≤ 1.5 MB each, JPEG/PNG/WebP
+   by magic bytes; `content/images.ts`). Errors: `400 too_many_images | image_too_large | image_type |
+   uploads_not_supported` (site schema has no `uploads`). Images go to the model as image blocks with their future
+   URL (`<publicPath>/<YYYY-MM-name-hash8>.<ext>`), cached after the first step; only images whose URL appears in
+   the changed content are committed (same commit). Response adds `images` (URLs committed).
 2. Read the test branch (`dev_branch`) at its head SHA: the site's own `schema.json` (ADR-013, parsed by
    `content/site-schema.ts`; missing/invalid → `503 site_schema_invalid`, reason logged), `site.json`, `pages/*.json`.
 3. `runEdit` (`agent.ts`): Claude (Messages API, `EDIT_MODEL`, default `claude-sonnet-5-5`) gets the rules, the

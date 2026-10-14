@@ -10,6 +10,11 @@ export const OWNER = "lastnik@example.com";
 export const ROOT = "apps/site/content";
 export const T0 = 1_760_000_000_000;
 
+/** Smallest byte headers of real image formats (and an SVG with script, which must be refused). */
+export const JPEG = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1]);
+export const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
+export const SVG = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>');
+
 /** The demo site's real, committed schema (apps/site/content/schema.json, generated from its zod schema). */
 export const demoSchemaText = readFileSync(
   new URL("../../../site/content/schema.json", import.meta.url),

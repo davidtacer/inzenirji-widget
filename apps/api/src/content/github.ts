@@ -29,6 +29,21 @@ export interface ContentChange {
   content: string | null;
 }
 
+/** An uploaded image committed with an edit (TASK-015): repo-relative path inside the site's uploads folder. */
+export interface UploadFile {
+  repoPath: string;
+  base64: string;
+}
+
+/** File names the editor gives uploaded images ("2026-10-hotel-korosica-3fa9c2d1.jpg"). */
+const UPLOAD_NAME = /^[a-z0-9](?:[a-z0-9-]{0,80})\.(?:jpg|png|webp)$/;
+
+/** True when `repoPath` is a direct child of `dir` with an editor-made image name. */
+export function isAllowedUploadPath(repoPath: string, dir: string): boolean {
+  const prefix = `${dir}/`;
+  return repoPath.startsWith(prefix) && UPLOAD_NAME.test(repoPath.slice(prefix.length));
+}
+
 export type GitHubErrorCode =
   | "not_found"
   | "conflict"
@@ -80,7 +95,12 @@ function decodeBase64Utf8(b64: string): string {
 
 export interface GitHubContentStore {
   read(branch: string): Promise<ContentSnapshot>;
-  commit(changes: ContentChange[], message: string, expectedHeadSha: string): Promise<string>;
+  commit(
+    changes: ContentChange[],
+    message: string,
+    expectedHeadSha: string,
+    uploads?: { dir: string; files: UploadFile[] },
+  ): Promise<string>;
   publish(message: string): Promise<{ merged: boolean; sha: string | null }>;
   undoLastPublish(): Promise<{ sha: string; revertedMessage: string }>;
   discardDraft(): Promise<string>;
@@ -207,23 +227,41 @@ export function createGitHubStore(
       return { headSha, schema, site, pages };
     },
 
-    async commit(changes, message, expectedHeadSha) {
+    async commit(changes, message, expectedHeadSha, uploads) {
       if (changes.length === 0) throw new Error("commit: no changes");
       for (const c of changes) {
         if (!isAllowedContentPath(c.path)) throw new Error(`commit: path not allowed: ${c.path}`);
+      }
+      const files = uploads?.files ?? [];
+      for (const f of files) {
+        if (!uploads || !isAllowedUploadPath(f.repoPath, uploads.dir))
+          throw new Error(`commit: upload path not allowed: ${f.repoPath}`);
       }
       const head = await headOf(cfg.devBranch);
       if (head !== expectedHeadSha) {
         throw new GitHubError("conflict", 409, "The test site changed while editing; please try again.");
       }
       const { data: headCommit } = await gh<{ tree: { sha: string } }>("GET", `/git/commits/${head}`);
+      // Binary files cannot be inlined in a tree: each becomes a blob first.
+      const blobs = await Promise.all(
+        files.map(async (f) => {
+          const { data } = await gh<{ sha: string }>("POST", "/git/blobs", {
+            content: f.base64,
+            encoding: "base64",
+          });
+          return { path: f.repoPath, mode: "100644", type: "blob", sha: data.sha };
+        }),
+      );
       const { data: tree } = await gh<{ sha: string }>("POST", "/git/trees", {
         base_tree: headCommit.tree.sha,
-        tree: changes.map((c) =>
-          c.content === null
-            ? { path: contentPath(c.path), mode: "100644", type: "blob", sha: null }
-            : { path: contentPath(c.path), mode: "100644", type: "blob", content: c.content },
-        ),
+        tree: [
+          ...changes.map((c) =>
+            c.content === null
+              ? { path: contentPath(c.path), mode: "100644", type: "blob", sha: null }
+              : { path: contentPath(c.path), mode: "100644", type: "blob", content: c.content },
+          ),
+          ...blobs,
+        ],
       });
       const { data: commit } = await gh<{ sha: string }>("POST", "/git/commits", {
         message,
