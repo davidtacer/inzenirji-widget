@@ -63,7 +63,22 @@ function setup(opts: { stored?: StoredSession; api?: Partial<AuthApi>; search?: 
     removeEventListener: target.removeEventListener.bind(target),
     parent,
   } as AppDeps["win"];
-  const deps: AppDeps = { api, store, win };
+  const sites: AppDeps["sites"] = () => ({
+    status: async () => ({
+      ok: true as const,
+      value: {
+        unpublished: 0,
+        previewBuild: "success" as const,
+        previewUrl: "https://dev.x",
+        liveUrl: "https://x",
+      },
+    }),
+    edit: async () => ({ ok: false as const, status: 503, error: "agent_unavailable" }),
+    publish: async () => ({ ok: true as const, value: { published: false, liveUrl: "https://x" } }),
+    undo: async () => ({ ok: true as const, value: { undone: true, liveUrl: "https://x" } }),
+    discard: async () => ({ ok: true as const, value: { discarded: true } }),
+  });
+  const deps: AppDeps = { api, store, win, sites };
   container = document.createElement("div");
   document.body.appendChild(container);
   act(() =>
@@ -276,7 +291,10 @@ describe("default dependencies", () => {
     act(() => render(<App params={readParams(`?site=${SITE}`)} />, container));
     for (let i = 0; i < 5; i++) await flush();
     expect(text()).toContain("lastnik@hisa-denk.si");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const meCalls = fetchMock.mock.calls.filter((c) =>
+      String((c as unknown[])[0]).startsWith("/api/auth/me"),
+    );
+    expect(meCalls).toHaveLength(1);
     vi.unstubAllGlobals();
     localStorage.clear();
   });

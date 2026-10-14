@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-13 23:30 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-14 00:30 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -33,6 +33,9 @@ Conversation with the owner in Slovenian; code and docs in English.
 ## Done
 - 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it). Default branch `dev` (owner).
 - 2026-10-13: owner merged PR #1 (merge commit a05850e); set Cloudflare secrets for Actions.
+- 2026-10-13/14 night (owner asleep, ADR-012): PR #8 site template + demo site (branches `demo/dev`, `demo/main`
+  created by the agent; demo-dev.inzenirji.si and demo.inzenirji.si deployed, smoke green), PR #9 GitHub store,
+  PR #10 agent, PR #11 chat UI — all CI green, not merged (agent cannot merge).
 - 2026-10-13: owner set Worker secret `SMTP_PASSWORD`, created D1 `inzenirji-editor-dev`
   (0cbe9b52-ff01-40d8-a348-cb54b05def54); PR #3 merged.
 - 2026-10-13: TASK-004a (auth API) merged (PR #4, 2bb978c). Proof in `docs/tasks/TASK-004a.feedback.md`.
@@ -46,20 +49,44 @@ Conversation with the owner in Slovenian; code and docs in English.
   Branch `docs/foundation` is contained in PR #1 and can be deleted.
 
 ## Owner's open actions
-0. Done 2026-10-13: owner tested login/logout on dev via https://inzenirji.si/uredi (site `demo-site`).
-1. Delete branch `docs/foundation` (contained in PR #1).
-3. **Branch protection on `dev` and `main`** (recommended): require the `CI` check to pass before merge.
-4. Optional: decide whether the repo should be private (it holds no secrets, but it is product code).
+### Morning 2026-10-14 — to test the full loop (chat → test site → publish → undo)
+1. **Merge in this order**, each when `CI` is green (they are stacked):
+   #8 site template → #9 GitHub store → #10 agent → #11 chat UI. After each merge "Deploy dev" runs (it applies
+   D1 migration `0002_content.sql`).
+2. **GitHub token** (fine-grained): https://github.com/settings/personal-access-tokens/new → Resource owner
+   `davidtacer` → Only select repositories: `inzenirji-widget` → Repository permissions: **Contents: Read and
+   write**, **Checks: Read-only** → Generate. Keep your own copy.
+3. **Worker secrets** (Cloudflare → Workers & Pages → `inzenirji-editor-dev` → Settings → Variables and Secrets,
+   type Secret): `GITHUB_TOKEN` = token from step 2; `ANTHROPIC_API_KEY` = Anthropic API key.
+4. **D1 console** (`inzenirji-editor-dev`), with your e-mail:
+   ```sql
+   INSERT INTO sites (id, name, origin, created_at)
+   VALUES ('demo', 'Gostilna Pri Lipi (demo)', 'https://demo.inzenirji.si', unixepoch() * 1000);
+   INSERT INTO site_users (site_id, email, role, created_at)
+   VALUES ('demo', 'TVOJ@NASLOV', 'owner', unixepoch() * 1000);
+   INSERT INTO site_repos (site_id, owner, repo, dev_branch, main_branch, content_root, preview_url, live_url)
+   VALUES ('demo', 'davidtacer', 'inzenirji-widget', 'demo/dev', 'demo/main', 'apps/site/content',
+           'https://demo-dev.inzenirji.si', 'https://demo.inzenirji.si');
+   ```
+5. Open https://demo.inzenirji.si/uredi → log in → write e.g. "Bučna juha naj stane 6,50 €" → wait for
+   "Testna stran · pripravljena" (1–2 min) → check https://demo-dev.inzenirji.si/meni → "Objavi v živo" →
+   https://demo.inzenirji.si/meni after 1–2 min → try "Razveljavi zadnjo objavo".
+   If an edit fails with a Cloudflare CPU-limit error (1102), switch the account to Workers Paid (ADR-009).
 
-## Template requirements
-- `/uredi` page boilerplate for client sites: `docs/template/uredi-page.md` (ADR-011). Move to the template repo when it exists.
+### Still open
+- Delete branch `docs/foundation` (contained in PR #1).
+- **Branch protection on `dev` and `main`** (recommended): require the `CI` check to pass before merge.
+- Optional: make the repo private — commit messages of demo edits contain the request text (demo content is fictional).
+- SPF for `inzenirji.si`: consider `v=spf1 +a +mx a:mail.datavallis.com ~all`; check DKIM.
+- Confirm conversation retention (proposed 12 months).
 
 ## Parked ideas
 - npm wrapper package around the embed script (ADR-002) if a non-template site ever needs it.
 
 ## Next
-TASK-005 (GitHub content adapter: GitHub App, read/write `content/` on `dev`, merge, revert) — needs a
-GitHub App from the owner and a test client repo; or the site template (phase 0) first. Latest TASK: 010 (004 split a/b) · latest ADR: 011.
+After the morning test: TASK-008 screenshots of the test site in the chat (Browser Rendering), measure real
+cost per edit (phase 1), template blocks the owner wants, real client onboarding (own repo per client,
+GitHub App, Workers Paid). Latest TASK: 011 · latest ADR: 012.
 
 ## Open items
 - Conversation retention proposed 12 months (owner to confirm); site "notes" + recent-change summary go into TASK-006.
