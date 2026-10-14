@@ -6,7 +6,7 @@ import { type CallModel, ModelError } from "../agent/claude.ts";
 import { costMicros, priceCents, sumUsage } from "../agent/pricing.ts";
 import { bearerToken } from "../auth/routes.ts";
 import { getSession, hitRateLimit } from "../auth/service.ts";
-import { type GitHubContentStore, GitHubError, type RepoConfig } from "../content/github.ts";
+import { type GitHubContentStore, GitHubError, type RepoConfig, SiteSchemaError } from "../content/github.ts";
 import type { Db } from "../db.ts";
 
 export interface SiteRepoRow {
@@ -116,6 +116,11 @@ export async function siteContext(c: Context, deps: SiteRouteDeps): Promise<Site
 
 /** Maps GitHub failures to API errors; anything else is rethrown (→ 500). */
 export function githubErrorResponse(c: Context, e: unknown): Response {
+  if (e instanceof SiteSchemaError) {
+    // A developer problem in the site's repo, not the owner's: logged with the reason, owner sees "not ready".
+    console.error("[sites] site schema:", e.reason);
+    return c.json<ErrorResponse>({ error: "site_schema_invalid" }, 503);
+  }
   if (e instanceof GitHubError) {
     console.error("[sites] github error:", e.code, e.status);
     if (e.code === "conflict") return c.json<ErrorResponse>({ error: "conflict" }, 409);

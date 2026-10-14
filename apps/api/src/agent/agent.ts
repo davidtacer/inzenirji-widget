@@ -1,11 +1,12 @@
-import { contentJsonSchemas, Page, Site, Slug } from "@inzenirji/site-schema";
 import type { ContentChange, ContentSnapshot } from "../content/github.ts";
+import { isValidSlug, type SiteSchema, validatorFor } from "../content/site-schema.ts";
 import type { CallModel, ContentBlock, Message, ToolDef } from "./claude.ts";
 import type { Usage } from "./pricing.ts";
 
 /**
  * Level-1 editing agent (TASK-006): the model edits JSON content through tools; every write is validated
- * against the site schema; nothing leaves this function except a list of file changes.
+ * against the content schema the site itself publishes (ADR-013) — the agent knows no block types of its own.
+ * Nothing leaves this function except a list of file changes.
  */
 export const MAX_STEPS = 10;
 export const MAX_TOKENS = 8192;
@@ -44,13 +45,13 @@ export const TOOLS: ToolDef[] = [
   },
   {
     name: "read_site",
-    description: "Read site.json (name, contact, opening hours, navigation, theme).",
+    description: "Read site.json (site-wide content such as name, contact, navigation; see the site schema).",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "write_page",
     description:
-      "Create or replace one page. Pass the COMPLETE page JSON (slug, title, seo, blocks) following the page schema. " +
+      "Create or replace one page. Pass the COMPLETE page JSON following the page schema (its slug is the file name). " +
       "Returns 'ok' or validation errors to fix.",
     input_schema: {
       type: "object",
@@ -84,7 +85,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "escalate",
     description:
-      "Use when the request cannot be done with the existing blocks and fields (new kind of section, forms, " +
+      "Use when the request cannot be done with what the site schema allows (a new kind of section, forms, " +
       "integrations, design changes, uploading new images), or is unclear/unsafe. Explain briefly why.",
     input_schema: {
       type: "object",
@@ -95,39 +96,43 @@ export const TOOLS: ToolDef[] = [
   },
 ];
 
-let schemaText: { site: string; page: string } | null = null;
+const prompts = new Map<string, string>();
 
-export function systemPrompt(siteName: string): string {
-  // JSON Schema generation is pure but not free; compute once per Worker isolate (CPU budget).
-  schemaText ??= (() => {
-    const { site, page } = contentJsonSchemas();
-    return { site: JSON.stringify(site), page: JSON.stringify(page) };
-  })();
-  const { site, page } = schemaText;
-  return `You are the website editor for "${siteName}", a small business website built by Inženirji.si.
+/** System prompt for a site; the same text for every edit of a schema version, so it is cached by the API. */
+export function systemPrompt(siteName: string, schema: SiteSchema): string {
+  const key = `${siteName}\u0000${schema.text}`;
+  const hit = prompts.get(key);
+  if (hit) return hit;
+  const text = `You are the website editor for "${siteName}", a website built by Inženirji.si.
 The site owner writes to you in Slovenian (sometimes casually, on a phone). You change the website's content by
-editing JSON through tools. The design, layout and code cannot be changed.
+editing JSON through tools. The design, layout and code cannot be changed; what can be edited, and how, is defined
+by this site's own JSON Schemas below (follow their field descriptions, e.g. units).
 
 Rules:
 - Change only what the owner asked for. Keep everything else exactly as it is (copy unchanged fields verbatim).
 - Read before you write: use read_page / read_site, then write the complete updated JSON.
-- Prices are integer euro cents in "priceCents" (6,50 € → 650). Never use decimals for prices.
-- Do not invent facts (phone numbers, addresses, prices, opening hours, dishes). If something needed is missing, ask.
-- Images: only reuse image paths that already exist in the content. You cannot upload or create images.
-- Slugs: lowercase letters, digits and hyphens; "index" is the home page; "uredi" is reserved.
-- New pages: build them only from the existing block types; add them to site navigation if the owner wants them in the menu.
+- Do not invent facts (phone numbers, addresses, prices, opening hours, names). If something needed is missing, ask.
+- Images: only reuse image paths or URLs that already exist in the content. You cannot upload or create images.
+- Page slugs (file names): lowercase letters, digits and hyphens; "index" is the home page; "uredi" is reserved.
+- New pages: build them only from what the page schema allows; add them to the site navigation if the site has one
+  and the owner wants them in the menu.
 - If a write returns validation errors, fix the JSON and write again.
-- If the request needs something the blocks cannot do, or is unclear, call escalate or ask a short question instead of guessing.
-- Text on the website is Slovenian unless the owner asks otherwise. Use proper Slovenian (č, š, ž).
+- If the request needs something the schema does not allow, or is unclear, call escalate or ask a short question.
+- Text on the website is Slovenian unless the site rules or the owner say otherwise. Use proper Slovenian (č, š, ž).
 - When you are done, reply to the owner in Slovenian, formal "vi", 1–3 short sentences: what you changed. Do not
   say the change is already visible or tell them to check the test site: it needs a minute or two to rebuild and
   the editor shows that progress itself. If you changed nothing, say why or ask your question. No markdown, no JSON.
 
-Block types and fields are defined by these JSON Schemas.
+Rules of this site (from its developers):
+${schema.notes.trim() || "(none)"}
+
 Site schema (site.json):
-${site}
+${JSON.stringify(schema.site)}
 Page schema (pages/<slug>.json):
-${page}`;
+${JSON.stringify(schema.page)}`;
+  if (prompts.size >= 20) prompts.delete(prompts.keys().next().value as string);
+  prompts.set(key, text);
+  return text;
 }
 
 /** Key-order-independent JSON for comparing content. */
@@ -144,12 +149,10 @@ function canonical(value: unknown): string {
 
 const fileText = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 
-function issuesOf(error: { issues: Array<{ path: PropertyKey[]; message: string }> }): string {
-  return error.issues
-    .slice(0, 20)
-    .map((i) => `- ${i.path.map(String).join(".") || "(root)"}: ${i.message}`)
-    .join("\n");
-}
+const listIssues = (issues: string[]) => issues.map((i) => `- ${i}`).join("\n");
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 
 export async function runEdit(input: EditInput, callModel: CallModel, model: string): Promise<EditResult> {
   const original = input.snapshot;
@@ -158,7 +161,10 @@ export async function runEdit(input: EditInput, callModel: CallModel, model: str
   let escalated = false;
   const usage: Usage[] = [];
 
-  const siteName = Site.safeParse(original.site).data?.name ?? "spletna stran";
+  const validate = validatorFor(original.schema);
+  const siteRecord = isObject(original.site) ? original.site : {};
+  const siteName =
+    typeof siteRecord.name === "string" && siteRecord.name.trim() ? siteRecord.name : "spletna stran";
   const historyText = input.history.length
     ? input.history
         .slice(0, 5)
@@ -192,19 +198,27 @@ export async function runEdit(input: EditInput, callModel: CallModel, model: str
       case "read_site":
         return { text: JSON.stringify(site) };
       case "write_page": {
-        const parsed = Page.safeParse(args.page);
-        if (!parsed.success) return { text: `Invalid page:\n${issuesOf(parsed.error)}`, isError: true };
-        // Store what the model sent (defaults not applied), validated.
-        pages[parsed.data.slug] = args.page;
+        const page = args.page;
+        const slug = isObject(page) && typeof page.slug === "string" ? page.slug : "";
+        if (slug !== "index" && !isValidSlug(slug)) {
+          return {
+            text: 'Invalid page: "slug" must be "index" or lowercase letters, digits and hyphens (not "uredi").',
+            isError: true,
+          };
+        }
+        const issues = validate.page(page);
+        if (issues.length) return { text: `Invalid page:\n${listIssues(issues)}`, isError: true };
+        pages[slug] = page;
         return { text: "ok" };
       }
       case "write_site": {
-        const parsed = Site.safeParse(args.site);
-        if (!parsed.success) return { text: `Invalid site.json:\n${issuesOf(parsed.error)}`, isError: true };
-        if (parsed.data.id !== (original.site as { id?: string }).id) {
+        const next = args.site;
+        const issues = validate.site(next);
+        if (issues.length) return { text: `Invalid site.json:\n${listIssues(issues)}`, isError: true };
+        if ("id" in siteRecord && (!isObject(next) || next.id !== siteRecord.id)) {
           return { text: "site.id must not change.", isError: true };
         }
-        site = args.site;
+        site = next;
         return { text: "ok" };
       }
       case "delete_page": {
@@ -228,7 +242,7 @@ export async function runEdit(input: EditInput, callModel: CallModel, model: str
     if (canonical(site) !== canonical(original.site))
       changes.push({ path: "site.json", content: fileText(site) });
     for (const [slug, page] of Object.entries(pages)) {
-      if (!Slug.safeParse(slug).success && slug !== "index") continue; // never write odd file names
+      if (slug !== "index" && !isValidSlug(slug)) continue; // never write odd file names
       if (canonical(page) !== canonical(original.pages[slug])) {
         changes.push({ path: `pages/${slug}.json`, content: fileText(page) });
       }
@@ -239,7 +253,7 @@ export async function runEdit(input: EditInput, callModel: CallModel, model: str
     return { reply, changes, usage, escalated, outcome };
   };
 
-  const system = systemPrompt(siteName);
+  const system = systemPrompt(siteName, original.schema);
   for (let step = 0; step < MAX_STEPS; step++) {
     const res = await callModel({
       model,

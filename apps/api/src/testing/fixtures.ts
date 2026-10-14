@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { parseSiteSchema, type SiteSchema } from "../content/site-schema.ts";
 import { sha256Hex } from "../crypto.ts";
 import { FakeGitHub } from "./fake-github.ts";
 import { createTestDb, seedSite } from "./sqlite-d1.ts";
@@ -7,6 +9,13 @@ export const OTHER = { id: "drugi", name: "Druga stran", origin: "https://drugi.
 export const OWNER = "lastnik@example.com";
 export const ROOT = "apps/site/content";
 export const T0 = 1_760_000_000_000;
+
+/** The demo site's real, committed schema (apps/site/content/schema.json, generated from its zod schema). */
+export const demoSchemaText = readFileSync(
+  new URL("../../../site/content/schema.json", import.meta.url),
+  "utf8",
+);
+export const demoSchema = parseSiteSchema(demoSchemaText) as SiteSchema;
 
 export const demoSite = {
   id: "demo",
@@ -56,6 +65,7 @@ export async function contentFixture() {
   const initial = gh.addCommit(
     {
       "README.md": "template",
+      [`${ROOT}/schema.json`]: demoSchemaText,
       [`${ROOT}/site.json`]: JSON.stringify(demoSite),
       [`${ROOT}/pages/index.json`]: JSON.stringify(demoHome),
       [`${ROOT}/pages/meni.json`]: JSON.stringify(demoMenu),

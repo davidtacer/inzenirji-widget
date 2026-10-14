@@ -11,8 +11,8 @@
     "worker:dry-run": "wrangler deploy --env dev --dry-run --outdir dist-worker"
   },
   "dependencies": {
+    "@cfworker/json-schema": "4.1.1",
     "@inzenirji/shared": "workspace:*",
-    "@inzenirji/site-schema": "workspace:*",
     "hono": "4.13.13",
     "worker-mailer": "1.2.1"
   },

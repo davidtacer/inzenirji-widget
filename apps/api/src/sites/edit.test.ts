@@ -58,6 +58,21 @@ async function setup(opts: { model?: CallModel | null } = {}) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("POST /api/sites/:siteId/edit", () => {
+  it("a site without its schema.json cannot be edited: 503 site_schema_invalid, no model call, nothing logged", async () => {
+    const t = await setup();
+    const head = t.gh.refs.get("demo/dev") as string;
+    const files = { ...t.gh.filesAt(head) };
+    delete files[`${ROOT}/schema.json`];
+    t.gh.refs.set("demo/dev", t.gh.addCommit(files, [head], "no schema"));
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await t.edit({ message: "Bučna juha naj stane 6,50 €" });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "site_schema_invalid" });
+    expect(t.callModel).not.toHaveBeenCalled();
+    expect(t.log()).toEqual([]);
+    expect(errors).toHaveBeenCalledWith("[sites] site schema:", expect.stringContaining("missing"));
+  });
+
   it("commits the change to the test branch, logs cost, and answers with reply, preview and price", async () => {
     const t = await setup();
     const res = await t.edit({ message: "Bučna juha naj stane 6,50 €" });

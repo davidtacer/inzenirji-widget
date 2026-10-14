@@ -8,7 +8,9 @@
     "build": "next build && node scripts/postbuild.mjs",
     "check": "node scripts/check-build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "deploy:dry-run": "wrangler deploy --env preview --dry-run --outdir dist-worker"
+    "deploy:dry-run": "wrangler deploy --env preview --dry-run --outdir dist-worker",
+    "schema": "node scripts/schema.ts",
+    "schema:check": "node scripts/schema.ts --check"
   },
   "dependencies": {
     "@inzenirji/site-schema": "workspace:*",

@@ -6,6 +6,7 @@ import {
   isAllowedContentPath,
   PUBLISH_PREFIX,
   type RepoConfig,
+  SiteSchemaError,
 } from "./github.ts";
 
 const ROOT = "apps/site/content";
@@ -16,6 +17,17 @@ const cfg: RepoConfig = {
   mainBranch: "demo/main",
   contentRoot: ROOT,
 };
+/** A minimal site with its own schema: the store knows nothing about block types (ADR-013). */
+const schemaText = JSON.stringify({
+  version: 1,
+  notes: "Cene so v centih.",
+  site: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+  page: {
+    type: "object",
+    properties: { slug: { type: "string" }, title: { type: "string" }, price: { type: "integer" } },
+    required: ["slug", "title"],
+  },
+});
 const site = { name: "Gostilna" };
 const home = { slug: "index", title: "Domov" };
 const menu = { slug: "meni", title: "Meni", price: 550 };
@@ -25,6 +37,7 @@ function setup() {
   const initial = gh.addCommit(
     {
       "README.md": "template code",
+      [`${ROOT}/schema.json`]: schemaText,
       [`${ROOT}/site.json`]: JSON.stringify(site),
       [`${ROOT}/pages/index.json`]: JSON.stringify(home),
       [`${ROOT}/pages/meni.json`]: JSON.stringify(menu),
@@ -63,6 +76,41 @@ describe("read", () => {
     expect(snap.headSha).toBe(gh.refs.get("demo/dev"));
     expect(snap.site).toEqual(site);
     expect(snap.pages).toEqual({ index: home, meni: menu });
+    expect(snap.schema.notes).toBe("Cene so v centih.");
+    expect(snap.schema.text).toBe(schemaText);
+  });
+
+  it.each([
+    ["missing", null, "missing"],
+    ["not JSON", "{", "not valid JSON"],
+    ["wrong version", JSON.stringify({ version: 2, site: {}, page: {} }), "version"],
+    [
+      "page without slug",
+      JSON.stringify({
+        version: 1,
+        site: { type: "object" },
+        page: { type: "object", properties: { title: { type: "string" } }, required: ["title"] },
+      }),
+      'require "slug"',
+    ],
+  ])("a site without a usable schema.json cannot be read (%s)", async (_case, text, reason) => {
+    const { gh, store } = setup();
+    const head = gh.refs.get("demo/dev") as string;
+    const files: Record<string, string> = { ...gh.filesAt(head) };
+    if (text === null) delete files[`${ROOT}/schema.json`];
+    else files[`${ROOT}/schema.json`] = text;
+    gh.refs.set("demo/dev", gh.addCommit(files, [head], "schema"));
+    const err = await store.read("demo/dev").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SiteSchemaError);
+    expect((err as SiteSchemaError).reason).toContain(reason);
+  });
+
+  it("schema.json itself can never be written by the editor", async () => {
+    const { store, gh } = setup();
+    const head = gh.refs.get("demo/dev") as string;
+    await expect(store.commit([{ path: "schema.json", content: "{}" }], "x", head)).rejects.toThrow(
+      "path not allowed",
+    );
   });
 
   it("decodes UTF-8 (č, š, ž, €)", async () => {
