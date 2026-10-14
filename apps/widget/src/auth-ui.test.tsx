@@ -68,14 +68,17 @@ function setup(opts: { stored?: StoredSession; api?: Partial<AuthApi>; search?: 
       ok: true as const,
       value: {
         unpublished: 0,
+        previewSha: "d",
         previewBuild: "success" as const,
+        liveSha: "m",
+        liveBuild: "success" as const,
         previewUrl: "https://dev.x",
         liveUrl: "https://x",
       },
     }),
     edit: async () => ({ ok: false as const, status: 503, error: "agent_unavailable" }),
-    publish: async () => ({ ok: true as const, value: { published: false, liveUrl: "https://x" } }),
-    undo: async () => ({ ok: true as const, value: { undone: true, liveUrl: "https://x" } }),
+    publish: async () => ({ ok: true as const, value: { published: false, sha: null, liveUrl: "https://x" } }),
+    undo: async () => ({ ok: true as const, value: { undone: true, sha: "m", liveUrl: "https://x" } }),
     discard: async () => ({ ok: true as const, value: { discarded: true } }),
   });
   const deps: AppDeps = { api, store, win, sites };

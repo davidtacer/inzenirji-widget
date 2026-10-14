@@ -1,14 +1,17 @@
 import { render } from "preact";
 import { act } from "preact/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Editor, STATUS_POLL_MS } from "./Editor.tsx";
+import { DEPLOY_SLOW_MS, Editor, STATUS_POLL_MS } from "./Editor.tsx";
 import { t } from "./i18n.ts";
 import type { EditResult, SiteStatus, SitesApi } from "./sites-api.ts";
 import { createSitesApi, formatCents } from "./sites-api.ts";
 
 const status = (over: Partial<SiteStatus> = {}): SiteStatus => ({
   unpublished: 0,
+  previewSha: "dev0",
   previewBuild: "success",
+  liveSha: "main0",
+  liveBuild: "success",
   previewUrl: "https://demo-dev.inzenirji.si",
   liveUrl: "https://demo.inzenirji.si",
   ...over,
@@ -16,6 +19,7 @@ const status = (over: Partial<SiteStatus> = {}): SiteStatus => ({
 const editOk = (over: Partial<EditResult> = {}): EditResult => ({
   reply: "Cena je zdaj 6,50 €.",
   changed: true,
+  commitSha: "dev1",
   files: ["pages/meni.json"],
   escalated: false,
   previewUrl: "https://demo-dev.inzenirji.si",
@@ -43,8 +47,14 @@ async function setup(api: Partial<SitesApi> = {}, initial: SiteStatus = status()
   const full: SitesApi = {
     status: vi.fn(async () => ({ ok: true as const, value: initial })),
     edit: vi.fn(async () => ({ ok: true as const, value: editOk() })),
-    publish: vi.fn(async () => ({ ok: true as const, value: { published: true, liveUrl: initial.liveUrl } })),
-    undo: vi.fn(async () => ({ ok: true as const, value: { undone: true, liveUrl: initial.liveUrl } })),
+    publish: vi.fn(async () => ({
+      ok: true as const,
+      value: { published: true, sha: "main1", liveUrl: initial.liveUrl },
+    })),
+    undo: vi.fn(async () => ({
+      ok: true as const,
+      value: { undone: true, sha: "main2", liveUrl: initial.liveUrl },
+    })),
     discard: vi.fn(async () => ({ ok: true as const, value: { discarded: true } })),
     ...api,
   };
@@ -184,7 +194,8 @@ describe("Editor", () => {
     await act(async () => button(t("sl", "confirmPublish"))?.click());
     await flush();
     expect(api.publish).toHaveBeenCalledTimes(1);
-    expect(text()).toContain(t("sl", "published"));
+    expect(text()).toContain(t("sl", "publishDeploying"));
+    expect(text()).not.toContain(t("sl", "publishReady"));
   });
 
   it("cancel keeps everything as it was", async () => {
@@ -247,6 +258,162 @@ describe("Editor", () => {
       vi.advanceTimersByTime(STATUS_POLL_MS * 3);
     });
     expect(statusFn).toHaveBeenCalledTimes(2); // no polling once ready
+  });
+});
+
+describe("Editor: a change is only reported done once the site serves it", () => {
+  /** Renders with fake timers; `statuses` are answered in order (the last one repeats). */
+  async function live(statuses: SiteStatus[], api: Partial<SitesApi> = {}) {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
+    let n = 0;
+    const statusFn = vi.fn(async () => ({
+      ok: true as const,
+      value: statuses[Math.min(n++, statuses.length - 1)] as SiteStatus,
+    }));
+    const full: SitesApi = {
+      status: statusFn,
+      edit: vi.fn(async () => ({ ok: true as const, value: editOk() })),
+      publish: vi.fn(async () => ({
+        ok: true as const,
+        value: { published: true, sha: "main1", liveUrl: "https://demo.inzenirji.si" },
+      })),
+      undo: vi.fn(),
+      discard: vi.fn(async () => ({ ok: true as const, value: { discarded: true } })),
+      ...api,
+    };
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    await act(async () => {
+      render(
+        <Editor lang="sl" email="a@b.si" api={full} onLogout={() => {}} onSessionEnded={() => {}} />,
+        container,
+      );
+    });
+    await tick(0);
+    return { api: full, statusFn };
+  }
+  const tick = async (ms: number) => {
+    await act(async () => {
+      vi.advanceTimersByTime(ms);
+    });
+    for (let i = 0; i < 3; i++)
+      await act(async () => {
+        await Promise.resolve();
+      });
+  };
+  async function sendEdit() {
+    const ta = container.querySelector("textarea") as HTMLTextAreaElement;
+    await act(async () => {
+      ta.value = "Bučna juha naj stane 6,50 €";
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      container
+        .querySelector("form")
+        ?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await tick(0);
+  }
+
+  it("edit: 'preparing' with elapsed time until the build of its commit succeeds, then done with a link", async () => {
+    const { statusFn } = await live([
+      status(), // on open
+      status({ previewSha: "dev1", previewBuild: "pending", unpublished: 1 }), // after the edit
+      status({ previewSha: "dev1", previewBuild: "pending", unpublished: 1 }),
+      status({ previewSha: "dev1", previewBuild: "success", unpublished: 1 }),
+    ]);
+    await sendEdit();
+    expect(text()).toContain(t("sl", "previewDeploying"));
+    expect(text()).not.toContain(t("sl", "previewReady"));
+    expect(container.querySelector(".spinner")).not.toBeNull();
+    await tick(STATUS_POLL_MS);
+    expect(text()).toContain(t("sl", "previewDeploying"));
+    expect(text()).toContain("0:05");
+    await tick(STATUS_POLL_MS);
+    expect(text()).toContain(t("sl", "previewReady"));
+    expect(container.querySelector(".spinner")).toBeNull();
+    const link = [...container.querySelectorAll("a")].find((a) => a.textContent === t("sl", "openPreview"));
+    expect(link?.getAttribute("href")).toBe("https://demo-dev.inzenirji.si");
+    const calls = statusFn.mock.calls.length;
+    await tick(STATUS_POLL_MS * 4);
+    expect(statusFn.mock.calls.length).toBe(calls); // polling stops once done
+  });
+
+  it("edit: a status still showing the previous commit's finished build does not say done", async () => {
+    await live([
+      status(),
+      status({ previewSha: "dev0", previewBuild: "success" }), // answer from before the commit
+      status({ previewSha: "dev1", previewBuild: "success", unpublished: 1 }),
+    ]);
+    await sendEdit();
+    expect(text()).toContain(t("sl", "previewDeploying"));
+    expect(text()).not.toContain(t("sl", "previewReady"));
+    await tick(STATUS_POLL_MS);
+    expect(text()).toContain(t("sl", "previewReady"));
+  });
+
+  it.each([
+    ["failure", "previewFailed"],
+    ["unknown", "previewUnknown"],
+  ] as const)("edit: build %s → %s", async (build, key) => {
+    await live([status(), status({ previewSha: "dev1", previewBuild: build, unpublished: 1 })]);
+    await sendEdit();
+    expect(text()).toContain(t("sl", key));
+    expect(text()).not.toContain(t("sl", "previewDeploying"));
+  });
+
+  it("edit: marks a slow build after a few minutes", async () => {
+    await live([status(), status({ previewSha: "dev1", previewBuild: "pending", unpublished: 1 })]);
+    await sendEdit();
+    await tick(DEPLOY_SLOW_MS);
+    expect(text()).toContain(t("sl", "deploySlow"));
+  });
+
+  it("an older change is done when the newer commit that contains it is built", async () => {
+    const edit = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, value: editOk({ commitSha: "dev1" }) })
+      .mockResolvedValueOnce({ ok: true, value: editOk({ commitSha: "dev2", reply: "Druga." }) });
+    await live(
+      [
+        status(),
+        status({ previewSha: "dev1", previewBuild: "pending", unpublished: 1 }),
+        status({ previewSha: "dev2", previewBuild: "pending", unpublished: 1 }),
+        status({ previewSha: "dev2", previewBuild: "success", unpublished: 1 }),
+      ],
+      { edit },
+    );
+    await sendEdit();
+    await sendEdit();
+    expect(container.querySelectorAll(".deploy-deploying")).toHaveLength(2);
+    await tick(STATUS_POLL_MS);
+    expect(container.querySelectorAll(".deploy-ready")).toHaveLength(2);
+  });
+
+  it("discard stops waiting for changes that will no longer arrive", async () => {
+    await live([status(), status({ previewSha: "dev1", previewBuild: "pending", unpublished: 1 })]);
+    await sendEdit();
+    await act(async () => button(t("sl", "discard"))?.click());
+    await act(async () => button(t("sl", "confirmDiscard"))?.click());
+    await tick(0);
+    expect(text()).toContain(t("sl", "previewDiscarded"));
+    expect(container.querySelector(".spinner")).toBeNull();
+  });
+
+  it("publish: 'publishing' until the live site is built from the published commit", async () => {
+    await live([
+      status({ unpublished: 1, previewSha: "dev1" }),
+      status({ liveSha: "main1", liveBuild: "pending" }),
+      status({ liveSha: "main1", liveBuild: "success" }),
+    ]);
+    await act(async () => button(t("sl", "publish"))?.click());
+    await act(async () => button(t("sl", "confirmPublish"))?.click());
+    await tick(0);
+    expect(text()).toContain(t("sl", "publishDeploying"));
+    await tick(STATUS_POLL_MS);
+    expect(text()).toContain(t("sl", "publishReady"));
+    const link = [...container.querySelectorAll("a")].find((a) => a.textContent === t("sl", "openLive"));
+    expect(link?.getAttribute("href")).toBe("https://demo.inzenirji.si");
   });
 });
 

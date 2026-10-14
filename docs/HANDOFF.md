@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-14 00:30 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-14 09:20 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -31,6 +31,9 @@ Conversation with the owner in Slovenian; code and docs in English.
   deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
+- 2026-10-14 morning: owner merged #8–#11, set `GITHUB_TOKEN` + `ANTHROPIC_API_KEY`, seeded D1 → **full loop Live
+  and owner-tested** (edit of the phone number via chat → demo-dev, cost 0,04 €). Owner feedback: the reply said
+  "check the test site" before the build had finished → TASK-012 (PR open).
 - 2026-10-13: repo bootstrapped (initial commit on `main`, `dev` created from it). Default branch `dev` (owner).
 - 2026-10-13: owner merged PR #1 (merge commit a05850e); set Cloudflare secrets for Actions.
 - 2026-10-13/14 night (owner asleep, ADR-012): PR #8 site template + demo site (branches `demo/dev`, `demo/main`
@@ -49,7 +52,7 @@ Conversation with the owner in Slovenian; code and docs in English.
   Branch `docs/foundation` is contained in PR #1 and can be deleted.
 
 ## Owner's open actions
-### Morning 2026-10-14 — to test the full loop (chat → test site → publish → undo)
+### Morning 2026-10-14 — done (kept for reference when onboarding the next site)
 1. **Merge in this order**, each when `CI` is green (they are stacked):
    #8 site template → #9 GitHub store → #10 agent → #11 chat UI. After each merge "Deploy dev" runs (it applies
    D1 migration `0002_content.sql`).
@@ -87,7 +90,9 @@ Conversation with the owner in Slovenian; code and docs in English.
 ## Next
 After the morning test: TASK-008 screenshots of the test site in the chat (Browser Rendering), measure real
 cost per edit (phase 1), template blocks the owner wants, real client onboarding (own repo per client,
-GitHub App, Workers Paid). Latest TASK: 011 · latest ADR: 012.
+GitHub App, Workers Paid). Owner asked about using the editor on existing sites
+(inzenirji.si): proposed hybrid — the site reads selected texts/prices from JSON content, design stays in its code
+(pixel-identical, check with before/after screenshots). Latest TASK: 012 · latest ADR: 012.
 
 ## Open items
 - Conversation retention proposed 12 months (owner to confirm); site "notes" + recent-change summary go into TASK-006.

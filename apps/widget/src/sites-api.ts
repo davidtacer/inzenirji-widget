@@ -1,8 +1,15 @@
 import type { ApiResult } from "./api.ts";
 
+export type BuildState = "pending" | "success" | "failure" | "unknown";
+
 export interface SiteStatus {
   unpublished: number;
-  previewBuild: "pending" | "success" | "failure" | "unknown";
+  /** Commit the test site is (being) built from, and the state of that build. */
+  previewSha: string;
+  previewBuild: BuildState;
+  /** Commit the live site is (being) built from, and the state of that build. */
+  liveSha: string;
+  liveBuild: BuildState;
   previewUrl: string;
   liveUrl: string;
 }
@@ -10,6 +17,8 @@ export interface SiteStatus {
 export interface EditResult {
   reply: string;
   changed: boolean;
+  /** Commit on the test branch with this change (null when nothing changed). */
+  commitSha: string | null;
   files: string[];
   escalated: boolean;
   previewUrl: string;
@@ -20,8 +29,8 @@ export interface EditResult {
 export interface SitesApi {
   status(): Promise<ApiResult<SiteStatus>>;
   edit(message: string): Promise<ApiResult<EditResult>>;
-  publish(): Promise<ApiResult<{ published: boolean; liveUrl: string }>>;
-  undo(): Promise<ApiResult<{ undone: boolean; liveUrl: string }>>;
+  publish(): Promise<ApiResult<{ published: boolean; sha: string | null; liveUrl: string }>>;
+  undo(): Promise<ApiResult<{ undone: boolean; sha: string; liveUrl: string }>>;
   discard(): Promise<ApiResult<{ discarded: boolean }>>;
 }
 

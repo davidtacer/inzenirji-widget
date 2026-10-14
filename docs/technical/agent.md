@@ -16,7 +16,8 @@ Status: **Built** (TASK-006). Needs Worker secrets `ANTHROPIC_API_KEY` and `GITH
 6. Every processed message is logged in `change_log` with tokens, cost (micro-euros) and price (cents),
    also when nothing changed or the commit conflicted.
 7. Answer: `{reply, changed, files, escalated, previewUrl, costMicros, priceCents}`. The preview site rebuilds
-   from the new commit (demo: ~1–2 min), see `GET /status` → `previewBuild`.
+   from the new commit (demo: ~1–2 min), see `GET /status` → `previewSha`/`previewBuild`; `POST /edit` returns `commitSha`, and the widget says "done" only
+   when that commit is built (TASK-012). The agent is told not to claim the change is already visible.
 
 ## Cost (`pricing.ts`, ADR-005)
 USD per million tokens (third-party sources, 2026-10-13 — verify before billing):

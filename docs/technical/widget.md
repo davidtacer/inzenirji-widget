@@ -22,6 +22,13 @@ A Preact app rendered inside the embed iframe at `https://uredi.inzenirji.si/?si
   inline confirmation), chat (owner's messages, editor replies with cost, notices), composer (Enter sends,
   Shift+Enter new line, max 2000 chars). Polls `GET /status` every 10 s while the test site is being rebuilt.
   401 from any site route ends the session. Client: `src/sites-api.ts`.
+- Deploy progress (TASK-012): an editor reply that changed something shows "Pripravljam testno stran … m:ss"
+  (spinner) and turns into "Urejeno. Sprememba je vidna na testni strani · Odpri testno stran" only when
+  `GET /status` reports the test site built from the edit's `commitSha` with build `success` (failure → error
+  text, unknown → "saved, updates in 1–2 min", >5 min → "traja dlje kot običajno"). Publish and undo show the
+  same for the live site (`sha` from the response vs `liveSha`/`liveBuild`). A status answer for an older commit
+  never resolves the newest change (`applyStatus`); older changes resolve with the newer commit that contains
+  them; discard marks waiting changes as discarded. Polls every 5 s while anything is deploying.
 - `src/api.ts` — same-origin client; network failures become `status 0`; responses are zod-validated.
 - `src/session-store.ts` — session in the iframe's localStorage under `inzenirji:session:<siteId>`
   (partitioned per client site by the browser); expired or malformed entries are dropped; every call is

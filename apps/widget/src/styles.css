@@ -286,3 +286,46 @@ h2 {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Progress of a change on its way to the test or live site. */
+.deploy {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+}
+.bubble .deploy {
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
+}
+.deploy a {
+  color: var(--color-accent);
+}
+.deploy-ready .check {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+.deploy-failed {
+  color: var(--color-error);
+}
+.spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

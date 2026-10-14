@@ -7,10 +7,11 @@
 | TASK-003 | Embed ↔ widget postMessage protocol (versioned, origin-checked) | 001 | Planned |
 | TASK-004a | Auth API: D1, magic link mail, exchange, sessions, limits (ADR-010) | 002 | Done (PR #4) |
 | TASK-004b | Auth UI: embed passes `#login` token, widget login form + session | 004a | Done — Live on dev (PR #5) |
-| TASK-005 | Content on GitHub: read/write content files, commit to dev, publish, undo, discard | 011 | Built — PR open |
-| TASK-006 | Agent loop level 1: tools over JSON, schema validation, step limits, cost metering (micro-euros) | 005 | Built — PR open |
-| TASK-007 | Widget chat UI: send, show result, test-site link, price, Publish, Undo | 004b, 006 | Built — PR open |
+| TASK-005 | Content on GitHub: read/write content files, commit to dev, publish, undo, discard | 011 | Done — Live (PR #9) |
+| TASK-006 | Agent loop level 1: tools over JSON, schema validation, step limits, cost metering (micro-euros) | 005 | Done — Live (PR #10) |
+| TASK-007 | Widget chat UI: send, show result, test-site link, price, Publish, Undo | 004b, 006 | Done — Live, owner-tested (PR #11) |
 | TASK-008 | Screenshots of preview (desktop + phone) | 005, ADR-009 | Planned |
 | TASK-009 | Payments: Stripe credit, ledger, limits, estimate before send | 006 | Planned (phase 3) |
 | TASK-010 | Level 2 via Managed Agents | 006 | Planned (phase 4) |
-| TASK-011 | Site template (phase 0) + demo client site | 002 | Built — PR open |
+| TASK-011 | Site template (phase 0) + demo client site | 002 | Done — Live (PR #8) |
+| TASK-012 | Chat shows deploy progress; "done" only when the site serves the change | 007 | Built — PR open |
