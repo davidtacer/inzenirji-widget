@@ -1,4 +1,5 @@
 import { configFromEnv, createApp } from "./app.ts";
+import { createGitHubStore } from "./content/github.ts";
 import type { Db } from "./db.ts";
 import { consoleMailer, type Mailer, smtpMailer } from "./mailer.ts";
 
@@ -17,6 +18,11 @@ export interface WorkerEnv {
   SMTP_PASSWORD?: string;
   MAIL_FROM?: string;
   MAIL_FROM_NAME?: string;
+  /**
+   * Secret: GitHub token with Contents read/write (+ Checks read) on the client repos (dev: a fine-grained token
+   * for this repo, ADR-012). Without it /api/sites/* answers 503 github_unavailable.
+   */
+  GITHUB_TOKEN?: string;
 }
 
 interface ExecutionContextLike {
@@ -64,6 +70,16 @@ export default {
             background: (work: Promise<unknown>) => ctx.waitUntil(work),
           }
         : undefined;
-    return createApp({ ...config, ...(auth ? { auth } : {}) }).fetch(request);
+    const db = env.DB;
+    const githubToken = env.GITHUB_TOKEN?.trim();
+    const sites = db
+      ? {
+          db,
+          now: () => Date.now(),
+          storeFor: (repo: Parameters<typeof createGitHubStore>[0]) =>
+            githubToken ? createGitHubStore(repo, githubToken) : null,
+        }
+      : undefined;
+    return createApp({ ...config, ...(auth ? { auth } : {}), ...(sites ? { sites } : {}) }).fetch(request);
   },
 };
