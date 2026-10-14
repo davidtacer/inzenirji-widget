@@ -1,0 +1,44 @@
+# Site template — `apps/site` + `packages/site-schema`
+
+Status: **Built** (TASK-011). Demo deploy: workflow ready; live once branches `demo/dev` / `demo/main` exist.
+
+## What it is
+The template every client site is built from (phase 0, ADR-012). Code (blocks, design) is fixed; everything a
+client can change is JSON in `apps/site/content/`:
+```
+content/site.json          name, tagline, url, contact, opening hours, navigation, theme (colours, fonts), footer note
+content/pages/<slug>.json  page: slug (= file name, "index" = home), title, seo.description, blocks[]
+public/uploads/            images referenced as /uploads/<file>
+```
+Blocks: `hero`, `notice`, `text`, `services`, `menu`, `gallery`, `hours`, `contact`, `faq`
+(schemas and limits in `packages/site-schema/src/index.ts`). Prices are integer cents (`priceCents`),
+rendered as `6,50 €`. Links must start with `/`, `#`, `mailto:`, `tel:` or `https://`; images are
+`/uploads/…` (no `..`) or https URLs. Slug `uredi` is reserved.
+
+## How it builds
+Next.js 16 App Router, `output: "export"` → static files in `out/`.
+- `lib/content.ts` reads and validates all content; **invalid content fails the build** (second gate after the editor).
+- `app/layout.tsx` sets colours/fonts as CSS variables from `site.json`; `app/(site)/layout.tsx` adds header
+  (brand + navigation) and footer; pages: `app/(site)/page.tsx` (home) and `app/(site)/[slug]/page.tsx`.
+- `app/uredi/page.tsx` — editor page per ADR-011: no header/footer, `noindex, nofollow`, only
+  `<script src="$NEXT_PUBLIC_EDITOR_ORIGIN/embed.js" data-site="<site.id>" defer>`.
+- `app/robots.ts` → `Disallow: /uredi` (preview: `Disallow: /`); `app/sitemap.ts` lists content pages only.
+- `scripts/postbuild.mjs` writes `out/_headers`: `X-Robots-Tag: noindex, nofollow` for `/uredi` (preview: every path).
+- `scripts/check-build.mjs` (`pnpm check`, also in CI) verifies all of the above in `out/`.
+
+Env at build: `NEXT_PUBLIC_EDITOR_ORIGIN` (default `https://uredi.inzenirji.si`), `SITE_PREVIEW=1` for the hidden test site.
+
+## Demo client site (ADR-012)
+Fictional "Gostilna Pri Lipi", site id `demo`.
+| Branch | Built as | URL | Worker |
+|---|---|---|---|
+| `demo/dev` | preview (noindex everywhere) | https://demo-dev.inzenirji.si | `inzenirji-demo-site-preview` |
+| `demo/main` | live | https://demo.inzenirji.si | `inzenirji-demo-site-live` |
+Workflow `.github/workflows/site-demo.yml`: install → build → `pnpm check` → `wrangler deploy --env preview|live`
+→ smoke (home 200, `/uredi` has `X-Robots-Tag`). The editor will commit content to `demo/dev` and publish by
+merging into `demo/main` (TASK-005/006). To bring template changes from `dev` into the demo, merge `dev` into
+both demo branches.
+
+## Local
+`pnpm --filter @inzenirji/site dev` (http://localhost:3100) or `pnpm --filter @inzenirji/site build` + serve `out/`;
+`cd apps/site && npx wrangler dev --env live --port 8802` serves `out/` exactly like Cloudflare (incl. `_headers`).

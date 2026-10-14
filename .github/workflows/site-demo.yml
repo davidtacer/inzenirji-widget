@@ -1,0 +1,73 @@
+name: Deploy demo site
+
+# Demo client site (ADR-012). The editor commits content changes to `demo/dev` (hidden test site) and publishing
+# merges them into `demo/main` (public demo). Each push builds the static site and deploys it.
+on:
+  push:
+    branches: [demo/dev, demo/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy site
+    if: github.ref == 'refs/heads/demo/dev' || github.ref == 'refs/heads/demo/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PREVIEW: ${{ github.ref == 'refs/heads/demo/dev' && '1' || '0' }}
+      SITE_URL: ${{ github.ref == 'refs/heads/demo/dev' && 'https://demo-dev.inzenirji.si' || 'https://demo.inzenirji.si' }}
+      WRANGLER_ENV: ${{ github.ref == 'refs/heads/demo/dev' && 'preview' || 'live' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build site
+        working-directory: apps/site
+        env:
+          SITE_PREVIEW: ${{ env.PREVIEW }}
+          NEXT_PUBLIC_EDITOR_ORIGIN: https://uredi-dev.inzenirji.si
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: pnpm build
+
+      - name: Check build (noindex, robots, sitemap, pages)
+        working-directory: apps/site
+        env:
+          SITE_PREVIEW: ${{ env.PREVIEW }}
+        run: pnpm check
+
+      - name: Deploy
+        working-directory: apps/site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler deploy --env "$WRANGLER_ENV"
+
+      - name: Smoke test
+        run: |
+          code=000
+          for i in $(seq 1 30); do
+            # A new custom domain may not resolve for a minute; GitHub runs bash with -e, so never let curl fail here.
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$SITE_URL/" || true)
+            [ "$code" = 200 ] && break
+            echo "attempt $i: $code — waiting"; sleep 10
+          done
+          [ "$code" = 200 ] || { echo "FAIL: $SITE_URL/ returned $code"; exit 1; }
+          curl -fsS -D - -o /dev/null "$SITE_URL/uredi" | grep -i "x-robots-tag: noindex" \
+            || { echo "FAIL: /uredi without X-Robots-Tag"; exit 1; }
+          echo "site OK: $SITE_URL"

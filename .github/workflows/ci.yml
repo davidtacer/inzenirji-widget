@@ -49,3 +49,7 @@ jobs:
       - name: Worker bundle (dry run, no credentials)
         working-directory: apps/api
         run: pnpm worker:dry-run
+
+      - name: Site template build checks (noindex, robots, sitemap)
+        working-directory: apps/site
+        run: pnpm check

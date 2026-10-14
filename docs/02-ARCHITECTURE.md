@@ -10,7 +10,7 @@ Status labels: **Live** · **Built** · **Planned**.
 | 3 | Urejevalnik API (`apps/api`) | `https://uredi.inzenirji.si/api/*` (same origin as widget) | Live on dev (health, auth) |
 | 4 | Claude API | Messages API (level 1), Managed Agents (level 2) | Planned |
 | 5 | GitHub | client repo, branches `dev` and `main`, our GitHub App | Planned |
-| 6 | Hosting | Cloudflare Pages: `dev.<site>` (hidden) and `<site>` from `main` | Planned (ADR-009) |
+| 6 | Client site hosting | static site per branch (template `apps/site`); demo: Worker with assets, `demo/dev` → demo-dev, `demo/main` → demo | Built (ADR-009, ADR-012) |
 | 7 | Screenshot service | headless browser (Playwright or hosted) | Planned |
 | 8 | Payments | Stripe prepaid credit | Planned |
 
