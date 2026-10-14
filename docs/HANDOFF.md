@@ -31,6 +31,9 @@ Conversation with the owner in Slovenian; code and docs in English.
   deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
+- 2026-10-14 10:34: **GitHub App live on dev** — owner created `inzenirji-urejevalnik` (App ID 5312521), installed it
+  on `inzenirji-widget`, set `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY`; his edit was committed as
+  `inzenirji-urejevalnik[bot]` (demo/dev be16cb1). TASK-014 done.
 - 2026-10-14: owner merged #12 + #13 and tested (deploy progress + per-site schema work live). TASK-014 GitHub App
   built (PR open); owner creates the app per `docs/runbooks/github-app.md`.
 - 2026-10-14: owner tested publish + undo on the demo too (main: e8f5026 publish, f7edae4 undo).
@@ -84,9 +87,7 @@ Conversation with the owner in Slovenian; code and docs in English.
    https://demo.inzenirji.si/meni after 1–2 min → try "Razveljavi zadnjo objavo".
    If an edit fails with a Cloudflare CPU-limit error (1102), switch the account to Workers Paid (ADR-009).
 
-### GitHub App (TASK-014) — after merging its PR
-Follow `docs/runbooks/github-app.md`: create the app, install it on `inzenirji-widget`, set Worker secrets
-`GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`, test an edit on the demo, then delete `GITHUB_TOKEN` and revoke it.
+### GitHub App (TASK-014) — done; left: delete Worker secret `GITHUB_TOKEN` and revoke the fine-grained token.
 
 ### Still open
 - Delete branch `docs/foundation` (contained in PR #1).

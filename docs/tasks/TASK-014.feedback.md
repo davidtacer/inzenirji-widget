@@ -10,5 +10,6 @@
   (none / token only / app / fallback only on not installed); route → `503 github_not_installed`; widget message.
 - Deliberate breaks: no PKCS#1 → PKCS#8 wrapping → 6 tests fail; fallback on any app error → 1 test fails.
 
-## Not verified here
-- A real GitHub App (needs the owner to create it): see `docs/runbooks/github-app.md`.
+## Live (2026-10-14 10:34)
+- Owner created and installed the app; a real edit was committed by `inzenirji-urejevalnik[bot]` (demo/dev be16cb1),
+  so the app path (JWT → installation → token) works on Cloudflare Workers.
