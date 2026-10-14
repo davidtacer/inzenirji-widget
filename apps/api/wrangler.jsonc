@@ -1,6 +1,6 @@
 // Cloudflare Worker: widget (static assets) + API (/api/*) on one origin. ADR-009, ADR-010.
 // Only the `dev` environment is defined. Production is added by the owner's decision, never by CI on its own.
-// Secrets (never here): SMTP_PASSWORD, ANTHROPIC_API_KEY, GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY (TASK-014; optional
+// Secrets (never here): SMTP_PASSWORD, ANTHROPIC_API_KEY, STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (TASK-009), GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY (TASK-014; optional
 // fallback GITHUB_TOKEN) — Cloudflare dashboard → Worker →
 // Settings → Variables and Secrets.
 {
@@ -39,7 +39,8 @@
         "MAIL_FROM_NAME": "Inženirji.si",
         "EDIT_MODEL": "claude-sonnet-5-5",
         "USD_TO_EUR": "0.92",
-        "PRICE_MARGIN": "1"
+        "PRICE_MARGIN": "3",
+        "VAT_RATE": "0.22"
       }
     }
   }

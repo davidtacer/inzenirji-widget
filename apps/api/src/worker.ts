@@ -36,8 +36,14 @@ export interface WorkerEnv {
   EDIT_MODEL?: string;
   /** USD → EUR rate for cost metering (default 0.92). */
   USD_TO_EUR?: string;
-  /** Client price margin over AI cost (default 1 = cost price; billing is not live yet). */
+  /** Client price margin over AI cost (ADR-014: 3). */
   PRICE_MARGIN?: string;
+  /** VAT included in client prices (ADR-014: 0.22). */
+  VAT_RATE?: string;
+  /** Secret: Stripe secret key (sk_test_… / sk_live_…). With STRIPE_WEBHOOK_SECRET enables top-ups. */
+  STRIPE_SECRET_KEY?: string;
+  /** Secret: signing secret of the Stripe webhook endpoint (whsec_…). */
+  STRIPE_WEBHOOK_SECRET?: string;
 }
 
 const DEFAULT_MODEL = "claude-sonnet-5-5";
@@ -47,9 +53,24 @@ export function agentFromEnv(env: WorkerEnv) {
   const apiKey = env.ANTHROPIC_API_KEY?.trim();
   const model = env.EDIT_MODEL?.trim() || DEFAULT_MODEL;
   const usdToEur = Number(env.USD_TO_EUR ?? "0.92");
-  const margin = Number(env.PRICE_MARGIN ?? "1");
-  if (!apiKey || !isKnownModel(model) || !(usdToEur > 0) || !(margin >= 1)) return null;
-  return { callModel: anthropicCaller(apiKey), model, usdToEur, margin };
+  const margin = Number(env.PRICE_MARGIN ?? "3");
+  const vatRate = vatRateFromEnv(env);
+  if (!apiKey || !isKnownModel(model) || !(usdToEur > 0) || !(margin >= 1) || vatRate === null) return null;
+  return { callModel: anthropicCaller(apiKey), model, usdToEur, margin, vatRate };
+}
+
+export function vatRateFromEnv(env: Pick<WorkerEnv, "VAT_RATE">): number | null {
+  const v = Number(env.VAT_RATE ?? "0.22");
+  return v >= 0 && v < 1 ? v : null;
+}
+
+/** Stripe top-ups when both secrets are set (TASK-009). */
+export function paymentsFromEnv(env: WorkerEnv) {
+  const secretKey = env.STRIPE_SECRET_KEY?.trim();
+  const webhookSecret = env.STRIPE_WEBHOOK_SECRET?.trim();
+  const vatRate = vatRateFromEnv(env);
+  if (!secretKey || !webhookSecret || vatRate === null) return null;
+  return { stripe: { secretKey, webhookSecret }, vatRate };
 }
 
 // One app auth per isolate, so the key import, app JWT and installation tokens are reused across requests.
@@ -128,6 +149,7 @@ export default {
         : undefined;
     const db = env.DB;
     const agent = agentFromEnv(env);
+    const payments = paymentsFromEnv(env);
     const sites = db
       ? {
           db,
@@ -137,6 +159,7 @@ export default {
             return token ? createGitHubStore(repo, token) : null;
           },
           ...(agent ? { agent } : {}),
+          ...(payments ? { payments } : {}),
         }
       : undefined;
     return createApp({ ...config, ...(auth ? { auth } : {}), ...(sites ? { sites } : {}) }).fetch(request);
