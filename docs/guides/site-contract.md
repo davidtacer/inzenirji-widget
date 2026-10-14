@@ -81,7 +81,8 @@ hidden from search engines (meta + `X-Robots-Tag` + `Disallow: /uredi` + not in 
 registered in the editor database.
 
 ## 6. Registering the site in the editor (operator, not the site developer)
-1. GitHub access to the repo (dev: fine-grained token; production: the Inženirji.si GitHub App installed on it).
+1. GitHub access to the repo: install the Inženirji.si GitHub App on it, only this repo selected
+   (`docs/runbooks/github-app.md`). No tokens per site.
 2. D1 rows: `sites` (id, name, origin = the site's https origin), `site_users` (owner e-mails),
    `site_repos` (owner, repo, test/live branch, content root, test/live URL). See `docs/runbooks/add-site-user.md`.
 

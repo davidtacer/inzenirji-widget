@@ -29,7 +29,17 @@ export interface ContentChange {
   content: string | null;
 }
 
-export type GitHubErrorCode = "not_found" | "conflict" | "unauthorized" | "upstream" | "nothing_to_undo";
+export type GitHubErrorCode =
+  | "not_found"
+  | "conflict"
+  | "unauthorized"
+  | "upstream"
+  | "nothing_to_undo"
+  /** The Inženirji.si GitHub App is not installed on the site's repo (TASK-014). */
+  | "not_installed";
+
+/** A fixed token (dev) or a function that returns a current one (GitHub App installation tokens). */
+export type TokenSource = string | (() => Promise<string>);
 
 /** The site's repo has no usable content schema (missing or invalid `schema.json`): it cannot be edited. */
 export class SiteSchemaError extends Error {
@@ -90,7 +100,7 @@ export const DEPLOY_CHECK = "Deploy site";
 
 export function createGitHubStore(
   cfg: RepoConfig,
-  token: string,
+  token: TokenSource,
   fetchImpl: FetchLike = (i, init) => fetch(i, init),
 ): GitHubContentStore {
   const base = `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`;
@@ -99,7 +109,7 @@ export function createGitHubStore(
     const res = await fetchImpl(`${base}${path}`, {
       method,
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${typeof token === "string" ? token : await token()}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "inzenirji-editor",

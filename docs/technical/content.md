@@ -1,6 +1,9 @@
 # Content on GitHub, publish, undo — `apps/api/src/content`, `apps/api/src/sites`
 
-Status: **Live** on dev (TASK-005). Needs the Worker secret `GITHUB_TOKEN` and a `site_repos` row per site.
+Status: **Live** on dev (TASK-005). GitHub access: the Inženirji.si GitHub App (`GITHUB_APP_ID`,
+`GITHUB_APP_PRIVATE_KEY`, TASK-014, `docs/runbooks/github-app.md`) — per repo a 1 h installation token limited to
+that repo (Contents write, Checks read, Metadata read), cached per isolate; repos without the app fall back to
+`GITHUB_TOKEN` if set. App not installed and no fallback → `503 github_not_installed`. Plus a `site_repos` row per site.
 What a site repo must contain: `docs/guides/site-contract.md`.
 
 ## Model (ADR-012)

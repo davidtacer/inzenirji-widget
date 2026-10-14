@@ -15,5 +15,5 @@
 | TASK-010 | Level 2 via Managed Agents | 006 | Planned (phase 4) |
 | TASK-011 | Site template (phase 0) + demo client site | 002 | Done — Live (PR #8) |
 | TASK-012 | Chat shows deploy progress; "done" only when the site serves the change | 007 | Built — PR #12 |
-| TASK-013 | Per-site content schema (`schema.json` in the site repo), editor knows no block types | 012, ADR-013 | Built — PR open |
-| TASK-014 | GitHub App for client repos (replaces the dev token) | 013 | Planned (next) |
+| TASK-013 | Per-site content schema (`schema.json` in the site repo), editor knows no block types | 012, ADR-013 | Done — Live, owner-tested (PR #13) |
+| TASK-014 | GitHub App for client repos (replaces the dev token) | 013 | Built — PR open; owner creates the app |
