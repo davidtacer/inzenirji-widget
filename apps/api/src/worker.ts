@@ -21,7 +21,7 @@ export interface WorkerEnv {
   MAIL_FROM?: string;
   MAIL_FROM_NAME?: string;
   /**
-   * Secret: GitHub token with Contents read/write (+ Checks read) on the client repos (dev: a fine-grained token
+   * Secret: GitHub token with Contents read/write on the client repos (check runs: public repo, or a GitHub App with Checks read later) (dev: a fine-grained token
    * for this repo, ADR-012). Without it /api/sites/* answers 503 github_unavailable.
    */
   GITHUB_TOKEN?: string;
