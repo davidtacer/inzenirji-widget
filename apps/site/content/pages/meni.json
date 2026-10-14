@@ -1,9 +1,15 @@
 {
   "slug": "meni",
   "title": "Meni",
-  "seo": { "description": "Jesenski meni Gostilne Pri Lipi: juhe, glavne jedi in domače sladice." },
+  "seo": {
+    "description": "Jesenski meni Gostilne Pri Lipi: juhe, glavne jedi in domače sladice."
+  },
   "blocks": [
-    { "type": "hero", "heading": "Jesenski meni", "subheading": "Velja od 1. oktobra do konca novembra." },
+    {
+      "type": "hero",
+      "heading": "Jesenski meni",
+      "subheading": "Velja od 1. oktobra do konca novembra."
+    },
     {
       "type": "menu",
       "heading": "Kaj kuhamo",
@@ -17,7 +23,10 @@
               "description": "S praženimi bučnimi semeni in bučnim oljem.",
               "priceCents": 550
             },
-            { "name": "Goveja juha z rezanci", "priceCents": 450 }
+            {
+              "name": "Goveja juha z rezanci",
+              "priceCents": 450
+            }
           ]
         },
         {
@@ -28,15 +37,33 @@
               "description": "Svinjska pečenka, krompir iz krušne peči.",
               "priceCents": 1450
             },
-            { "name": "Ajdovi žganci z ocvirki", "description": "S kislim mlekom.", "priceCents": 990 },
-            { "name": "Gobova rižota", "description": "Z jurčki in parmezanom.", "priceCents": 1290 }
+            {
+              "name": "Ajdovi žganci z ocvirki",
+              "description": "S kislim mlekom.",
+              "priceCents": 990
+            },
+            {
+              "name": "Gobova rižota",
+              "description": "Z jurčki in parmezanom.",
+              "priceCents": 1290
+            },
+            {
+              "name": "Pica margarita",
+              "priceCents": 1000
+            }
           ]
         },
         {
           "name": "Sladice",
           "items": [
-            { "name": "Prekmurska gibanica", "priceCents": 480 },
-            { "name": "Jabolčni zavitek", "priceCents": 420 }
+            {
+              "name": "Prekmurska gibanica",
+              "priceCents": 480
+            },
+            {
+              "name": "Jabolčni zavitek",
+              "priceCents": 420
+            }
           ]
         }
       ]
