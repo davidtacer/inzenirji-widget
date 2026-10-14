@@ -1,6 +1,7 @@
 import type { ErrorResponse, HealthResponse } from "@inzenirji/shared";
 import { Hono } from "hono";
 import { type AuthRouteDeps, authRoutes } from "./auth/routes.ts";
+import { stripeWebhookRoutes } from "./billing/webhook.ts";
 import { type SiteRouteDeps, siteRoutes } from "./sites/routes.ts";
 
 /** Runtime configuration, read from the Worker environment (worker.ts). */
@@ -25,6 +26,21 @@ export function createApp(deps: AppDeps) {
     app.route("/auth", authRoutes(deps.auth));
   } else {
     app.all("/auth/*", (c) => c.json<ErrorResponse>({ error: "auth_unavailable" }, 503));
+  }
+
+  if (deps.sites?.payments) {
+    const { db, now, payments } = deps.sites;
+    app.route(
+      "/stripe",
+      stripeWebhookRoutes({
+        db,
+        now,
+        webhookSecret: payments.stripe.webhookSecret,
+        vatRate: payments.vatRate,
+      }),
+    );
+  } else {
+    app.all("/stripe/*", (c) => c.json<ErrorResponse>({ error: "payments_unavailable" }, 503));
   }
 
   if (deps.sites) {

@@ -67,6 +67,9 @@ function setup(opts: { stored?: StoredSession; api?: Partial<AuthApi>; search?: 
     status: async () => ({
       ok: true as const,
       value: {
+        balanceCents: 200,
+        estimateCents: 20,
+        packagesCents: [],
         unpublished: 0,
         previewSha: "d",
         previewBuild: "success" as const,
@@ -83,6 +86,7 @@ function setup(opts: { stored?: StoredSession; api?: Partial<AuthApi>; search?: 
     }),
     undo: async () => ({ ok: true as const, value: { undone: true, sha: "m", liveUrl: "https://x" } }),
     discard: async () => ({ ok: true as const, value: { discarded: true } }),
+    checkout: async () => ({ ok: false as const, status: 503, error: "payments_unavailable" }),
   });
   const deps: AppDeps = { api, store, win, sites };
   container = document.createElement("div");

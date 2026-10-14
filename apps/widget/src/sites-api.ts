@@ -3,6 +3,11 @@ import type { ApiResult } from "./api.ts";
 export type BuildState = "pending" | "success" | "failure" | "unknown";
 
 export interface SiteStatus {
+  /** Prepaid credit and the expected price of the next edit, cents incl. VAT (ADR-014). */
+  balanceCents: number;
+  estimateCents: number;
+  /** Top-up packages; empty when payments are not available. */
+  packagesCents: number[];
   unpublished: number;
   /** Commit the test site is (being) built from, and the state of that build. */
   previewSha: string;
@@ -22,6 +27,8 @@ export interface EditResult {
   files: string[];
   /** URLs of attached images that were used (and committed). */
   images?: string[];
+  /** Credit after this edit was charged. */
+  balanceCents?: number;
   escalated: boolean;
   previewUrl: string;
   costMicros: number;
@@ -35,6 +42,8 @@ export interface SitesApi {
   publish(): Promise<ApiResult<{ published: boolean; sha: string | null; liveUrl: string }>>;
   undo(): Promise<ApiResult<{ undone: boolean; sha: string; liveUrl: string }>>;
   discard(): Promise<ApiResult<{ discarded: boolean }>>;
+  /** Starts a Stripe Checkout for a credit package; returns the payment page URL. */
+  checkout(amountCents: number): Promise<ApiResult<{ url: string }>>;
 }
 
 export type SitesApiFactory = (siteId: string, sessionToken: string) => SitesApi;
@@ -93,11 +102,20 @@ export function createSitesApi(fetchImpl: FetchLike = (i, init) => fetch(i, init
       publish: () => call("POST", "publish", undefined, (v) => isObj(v) && typeof v.published === "boolean"),
       undo: () => call("POST", "undo", undefined, (v) => isObj(v) && v.undone === true),
       discard: () => call("POST", "discard", undefined, (v) => isObj(v) && v.discarded === true),
+      checkout: (amountCents) =>
+        call<{ url: string }>(
+          "POST",
+          "checkout",
+          { amountCents },
+          (v) => isObj(v) && typeof v.url === "string" && v.url.startsWith("https://checkout.stripe.com/"),
+        ),
     };
   };
 }
 
-/** "0,06 €" from integer cents. */
+/** "0,06 €" from integer cents (negative: "−0,05 €"). */
 export function formatCents(cents: number): string {
-  return `${Math.floor(cents / 100)},${(cents % 100).toString().padStart(2, "0")} €`;
+  const sign = cents < 0 ? "−" : "";
+  const abs = Math.abs(cents);
+  return `${sign}${Math.floor(abs / 100)},${(abs % 100).toString().padStart(2, "0")} €`;
 }

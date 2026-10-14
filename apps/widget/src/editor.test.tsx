@@ -7,6 +7,9 @@ import type { EditResult, SiteStatus, SitesApi } from "./sites-api.ts";
 import { createSitesApi, formatCents } from "./sites-api.ts";
 
 const status = (over: Partial<SiteStatus> = {}): SiteStatus => ({
+  balanceCents: 189,
+  estimateCents: 11,
+  packagesCents: [1000, 2500, 5000],
   unpublished: 0,
   previewSha: "dev0",
   previewBuild: "success",
@@ -62,6 +65,10 @@ async function setup(api: Partial<SitesApi> = {}, initial: SiteStatus = status()
       value: { undone: true, sha: "main2", liveUrl: initial.liveUrl },
     })),
     discard: vi.fn(async () => ({ ok: true as const, value: { discarded: true } })),
+    checkout: vi.fn(async () => ({
+      ok: true as const,
+      value: { url: "https://checkout.stripe.com/c/pay/cs_1" },
+    })),
     ...api,
   };
   const onSessionEnded = vi.fn();
@@ -244,6 +251,7 @@ describe("Editor", () => {
       publish: vi.fn(),
       undo: vi.fn(),
       discard: vi.fn(),
+      checkout: vi.fn(),
     };
     await act(async () => {
       render(
@@ -279,6 +287,122 @@ async function pick(...names: string[]) {
   });
   await flush();
 }
+
+describe("Editor: credit (TASK-009)", () => {
+  async function render2(
+    api: Partial<SitesApi> = {},
+    tab: unknown = { location: { href: "" }, close: vi.fn() },
+  ) {
+    const openTab = vi.fn(() => tab as Window | null);
+    const full: SitesApi = {
+      status: vi.fn(async () => ({ ok: true as const, value: status() })),
+      edit: vi.fn(async () => ({ ok: true as const, value: editOk({ balanceCents: 178 }) })),
+      publish: vi.fn(),
+      undo: vi.fn(),
+      discard: vi.fn(),
+      checkout: vi.fn(async () => ({
+        ok: true as const,
+        value: { url: "https://checkout.stripe.com/c/pay/cs_1" },
+      })),
+      ...api,
+    };
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    act(() =>
+      render(
+        <Editor
+          lang="sl"
+          email="a@b.si"
+          api={full}
+          onLogout={() => {}}
+          onSessionEnded={() => {}}
+          openTab={openTab}
+        />,
+        container,
+      ),
+    );
+    await flush();
+    return { api: full, openTab, tab };
+  }
+
+  it("shows the credit and the estimate for the next change", async () => {
+    await render2();
+    expect(text()).toContain("Dobroimetje: 1,89 €");
+    expect(text()).toContain("Ocena spremembe: ~0,11 €");
+  });
+
+  it("a package opens Stripe in a new tab (opened inside the click)", async () => {
+    const { api, openTab, tab } = await render2();
+    await act(async () => button(t("sl", "addCredit"))?.click());
+    expect(text()).toContain(t("sl", "creditVat"));
+    await act(async () => button("25 €")?.click());
+    await flush();
+    expect(openTab).toHaveBeenCalledTimes(1);
+    expect(api.checkout).toHaveBeenCalledWith(2500);
+    expect((tab as { location: { href: string } }).location.href).toBe(
+      "https://checkout.stripe.com/c/pay/cs_1",
+    );
+    expect(text()).toContain(t("sl", "paymentOpened"));
+  });
+
+  it("blocked pop-up → message, no checkout", async () => {
+    const { api } = await render2({}, null);
+    await act(async () => button(t("sl", "addCredit"))?.click());
+    await act(async () => button("10 €")?.click());
+    expect(api.checkout).not.toHaveBeenCalled();
+    expect(text()).toContain(t("sl", "popupBlocked"));
+  });
+
+  it("checkout failure closes the empty tab and explains", async () => {
+    const close = vi.fn();
+    await render2(
+      { checkout: vi.fn(async () => ({ ok: false as const, status: 502, error: "payments_failed" })) },
+      { location: { href: "" }, close },
+    );
+    await act(async () => button(t("sl", "addCredit"))?.click());
+    await act(async () => button("10 €")?.click());
+    await flush();
+    expect(close).toHaveBeenCalled();
+    expect(text()).toContain(t("sl", "errPayments"));
+  });
+
+  it("not enough credit → message and the packages open", async () => {
+    await render2({
+      edit: vi.fn(async () => ({
+        ok: false as const,
+        status: 402,
+        error: "insufficient_credit",
+      })) as SitesApi["edit"],
+    });
+    await type("x");
+    await submit();
+    expect(text()).toContain(t("sl", "errInsufficientCredit"));
+    expect(button("50 €")).toBeDefined();
+  });
+
+  it("the balance follows each change, and refreshes when the tab gets focus again (after paying)", async () => {
+    const statusFn = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, value: status() })
+      .mockResolvedValue({ ok: true, value: status({ balanceCents: 178 }) });
+    const { api } = await render2({ status: statusFn });
+    await type("x");
+    await submit();
+    expect(text()).toContain("Dobroimetje: 1,78 €");
+    const calls = (api.status as ReturnType<typeof vi.fn>).mock.calls.length;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect((api.status as ReturnType<typeof vi.fn>).mock.calls.length).toBe(calls + 1);
+  });
+
+  it("no packages (payments not configured) → no top-up button", async () => {
+    await render2({
+      status: vi.fn(async () => ({ ok: true as const, value: status({ packagesCents: [] }) })),
+    });
+    expect(button(t("sl", "addCredit"))).toBeUndefined();
+  });
+});
 
 describe("Editor: images (TASK-015)", () => {
   it("picked images are resized, shown as thumbnails, and sent with the message", async () => {
@@ -364,6 +488,7 @@ describe("Editor: a change is only reported done once the site serves it", () =>
       })),
       undo: vi.fn(),
       discard: vi.fn(async () => ({ ok: true as const, value: { discarded: true } })),
+      checkout: vi.fn(),
       ...api,
     };
     container = document.createElement("div");
@@ -546,6 +671,7 @@ describe("createSitesApi", () => {
   });
 
   it.each([
+    [-5, "−0,05 €"],
     [0, "0,00 €"],
     [6, "0,06 €"],
     [1234, "12,34 €"],

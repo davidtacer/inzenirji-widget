@@ -46,10 +46,13 @@ export function costMicros(model: string, requests: Usage[], usdToEur: number): 
   return Math.ceil(microUsd * usdToEur);
 }
 
-/** Client price in integer cents: cost × margin, rounded up to the next cent (1 cent = 10 000 micro-euros). */
-export function priceCents(costMicroEur: number, margin: number): number {
+/**
+ * Client price in integer cents incl. VAT (ADR-014): cost × margin × (1 + VAT), rounded up to the next cent
+ * (1 cent = 10 000 micro-euros). Rounded to 6 decimals first so float noise never adds a cent.
+ */
+export function priceCents(costMicroEur: number, margin: number, vatRate = 0): number {
   if (costMicroEur <= 0) return 0;
-  return Math.ceil((costMicroEur * margin) / 10_000);
+  return Math.ceil(Number(((costMicroEur * margin * (1 + vatRate)) / 10_000).toFixed(6)));
 }
 
 export function sumUsage(requests: Usage[]): Usage {

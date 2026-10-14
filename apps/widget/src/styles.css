@@ -387,3 +387,16 @@ h2 {
     animation: none;
   }
 }
+
+/* Credit (TASK-009) */
+.small {
+  font-size: 0.8rem;
+}
+.topup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.estimate {
+  text-align: right;
+}
