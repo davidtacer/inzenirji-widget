@@ -1,6 +1,7 @@
 import type { ErrorResponse, HealthResponse } from "@inzenirji/shared";
 import { Hono } from "hono";
 import { type AuthRouteDeps, authRoutes } from "./auth/routes.ts";
+import { type SiteRouteDeps, siteRoutes } from "./sites/routes.ts";
 
 /** Runtime configuration, read from the Worker environment (worker.ts). */
 export interface ApiConfig {
@@ -11,6 +12,8 @@ export interface ApiConfig {
 export interface AppDeps extends ApiConfig {
   /** Auth needs a database and a mailer; without them /api/auth/* answers 503. */
   auth?: AuthRouteDeps;
+  /** Content operations (status, publish, undo, discard, edit); without them /api/sites/* answers 503. */
+  sites?: SiteRouteDeps;
 }
 
 export function createApp(deps: AppDeps) {
@@ -22,6 +25,12 @@ export function createApp(deps: AppDeps) {
     app.route("/auth", authRoutes(deps.auth));
   } else {
     app.all("/auth/*", (c) => c.json<ErrorResponse>({ error: "auth_unavailable" }, 503));
+  }
+
+  if (deps.sites) {
+    app.route("/sites", siteRoutes(deps.sites));
+  } else {
+    app.all("/sites/*", (c) => c.json<ErrorResponse>({ error: "sites_unavailable" }, 503));
   }
 
   app.notFound((c) => c.json<ErrorResponse>({ error: "not_found" }, 404));

@@ -37,6 +37,10 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Content schema for the editor is up to date (ADR-013)
+        working-directory: apps/site
+        run: pnpm schema:check
+
       - name: Build site
         working-directory: apps/site
         env:

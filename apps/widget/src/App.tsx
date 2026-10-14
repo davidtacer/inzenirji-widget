@@ -2,16 +2,20 @@ import type { Role } from "@inzenirji/shared";
 import { parseEmbedToWidget } from "@inzenirji/shared/embed-protocol";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { type AuthApi, createAuthApi } from "./api.ts";
+import { Editor } from "./Editor.tsx";
 import { type Lang, type MessageKey, t } from "./i18n.ts";
 import type { WidgetParams } from "./params.ts";
 import { postToParent } from "./parent.ts";
 import { createSessionStore, type SessionStore } from "./session-store.ts";
+import { createSitesApi, type SitesApiFactory } from "./sites-api.ts";
 
 export interface AppDeps {
   api: AuthApi;
   store: SessionStore;
   /** The window that receives postMessage from the embed script; `parent` is the client page. */
   win: Pick<Window, "addEventListener" | "removeEventListener" | "parent">;
+  /** Client for /api/sites/:siteId/* once signed in. */
+  sites: SitesApiFactory;
 }
 
 type View =
@@ -21,7 +25,12 @@ type View =
   | { kind: "linkSent" }
   | { kind: "signedIn"; email: string; role: Role; token: string };
 
-const defaultDeps = (): AppDeps => ({ api: createAuthApi(), store: createSessionStore(), win: window });
+const defaultDeps = (): AppDeps => ({
+  api: createAuthApi(),
+  store: createSessionStore(),
+  win: window,
+  sites: createSitesApi(),
+});
 
 /** Maps a failed API result to the message shown to the user. */
 function noticeFor(result: { status: number; error: string }): MessageKey {
@@ -122,7 +131,15 @@ export function App(props: { params: WidgetParams; deps?: AppDeps }) {
             {t(lang, "invalidSite")}
           </p>
         ) : (
-          <Body lang={lang} siteId={siteId} view={view} setView={setView} api={deps.api} onLogout={logout} />
+          <Body
+            lang={lang}
+            siteId={siteId}
+            view={view}
+            setView={setView}
+            api={deps.api}
+            sites={deps.sites}
+            onLogout={logout}
+          />
         )}
       </main>
     </div>
@@ -135,6 +152,7 @@ function Body(props: {
   view: View;
   setView: (v: View) => void;
   api: AuthApi;
+  sites: SitesApiFactory;
   onLogout: (token: string) => void;
 }) {
   const { lang, view } = props;
@@ -160,16 +178,13 @@ function Body(props: {
       return <LoginForm {...props} notice={view.notice} />;
     case "signedIn":
       return (
-        <section>
-          <p class="who">
-            {t(lang, "signedInAs")} <strong>{view.email}</strong>
-          </p>
-          <p>{t(lang, "subtitle")}</p>
-          <p class="muted">{t(lang, "comingSoon")}</p>
-          <button type="button" class="button" onClick={() => props.onLogout(view.token)}>
-            {t(lang, "logout")}
-          </button>
-        </section>
+        <Editor
+          lang={lang}
+          email={view.email}
+          api={props.sites(props.siteId, view.token)}
+          onLogout={() => props.onLogout(view.token)}
+          onSessionEnded={() => props.onLogout(view.token)}
+        />
       );
   }
 }

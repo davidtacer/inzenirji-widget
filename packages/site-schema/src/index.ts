@@ -13,27 +13,34 @@ const optionalText = (max: number) => z.string().trim().max(max).optional();
 export const Href = z
   .string()
   .max(500)
-  .refine((v) => /^(\/(?!\/)|#|mailto:|tel:|https:\/\/)/.test(v), {
-    message: "Link must start with /, #, mailto:, tel: or https://",
-  });
+  .regex(/^(\/(?!\/)|#|mailto:|tel:|https:\/\/)/, "Link must start with /, #, mailto:, tel: or https://");
 
 /** Image path inside the site ("/uploads/…") or an https URL. */
 export const ImageSrc = z
   .string()
   .max(500)
-  .refine((v) => /^(\/uploads\/(?!.*\.\.)[A-Za-z0-9._/-]+|https:\/\/\S+)$/.test(v), {
-    message: "Image must be /uploads/<file> or an https URL",
-  });
+  .regex(
+    /^(\/uploads\/(?!.*\.\.)[A-Za-z0-9._/-]+|https:\/\/\S+)$/,
+    "Image must be /uploads/<file> or an https URL",
+  );
 
 export const Image = z.strictObject({ src: ImageSrc, alt: text(200) });
 
 /** Price in integer euro cents, 0 … 1 000 000 € */
-export const PriceCents = z.number().int().min(0).max(100_000_000);
+export const PriceCents = z
+  .number()
+  .int()
+  .min(0)
+  .max(100_000_000)
+  .describe("Price in integer euro cents: 6,50 € is 650. Never decimals.");
 
+/** Rules are regexes, not refinements, so they survive into the JSON Schema the editor validates with (ADR-013). */
 export const Slug = z
   .string()
-  .regex(/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/, "Slug: lowercase letters, digits, hyphens")
-  .refine((s) => s !== "uredi", { message: "'uredi' is reserved for the editor" });
+  .regex(
+    /^(?!uredi$)[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/,
+    "Slug: lowercase letters, digits, hyphens; 'uredi' is reserved for the editor",
+  );
 
 const Cta = z.strictObject({ label: text(60), href: Href });
 
@@ -115,6 +122,23 @@ export const FaqBlock = z.strictObject({
     .max(40),
 });
 
+export const ReferencesBlock = z.strictObject({
+  type: z.literal("references"),
+  heading: text(120),
+  intro: optionalText(300),
+  items: z
+    .array(
+      z.strictObject({
+        name: text(120).describe("Client or project name"),
+        description: optionalText(400),
+        image: Image.optional(),
+        href: Href.optional().describe("Link to the client's site or the project"),
+      }),
+    )
+    .min(1)
+    .max(60),
+});
+
 export const Block = z.discriminatedUnion("type", [
   HeroBlock,
   NoticeBlock,
@@ -125,6 +149,7 @@ export const Block = z.discriminatedUnion("type", [
   HoursBlock,
   ContactBlock,
   FaqBlock,
+  ReferencesBlock,
 ]);
 export type Block = z.infer<typeof Block>;
 export const BLOCK_TYPES = Block.options.map((o) => o.shape.type.value);

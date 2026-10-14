@@ -50,6 +50,10 @@ jobs:
         working-directory: apps/api
         run: pnpm worker:dry-run
 
+      - name: Site schema.json is up to date with the site's zod schema (ADR-013)
+        working-directory: apps/site
+        run: pnpm schema:check
+
       - name: Site template build checks (noindex, robots, sitemap)
         working-directory: apps/site
         run: pnpm check

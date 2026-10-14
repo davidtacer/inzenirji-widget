@@ -29,6 +29,10 @@ Never values here — only names and where they live.
 | Name | Used by | Status |
 |---|---|---|
 | `SMTP_PASSWORD` | login e-mails (`hello@inzenirji.si`) | Set by owner 2026-10-13 |
+| `GITHUB_TOKEN` | fallback for repos without the GitHub App (fine-grained, this repo, Contents RW) | set 2026-10-14; delete after the app works |
+| `GITHUB_APP_ID` | GitHub App ID (TASK-014, `docs/runbooks/github-app.md`) | **to set** |
+| `GITHUB_APP_PRIVATE_KEY` | GitHub App private key (.pem contents) | **to set** |
+| `ANTHROPIC_API_KEY` | editing agent | **to set** (morning) |
 
 ## D1
 | Env | Database | Console |

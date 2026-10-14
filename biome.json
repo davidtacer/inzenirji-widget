@@ -14,7 +14,8 @@
       "!apps/site/public",
       "!apps/site/out",
       "!apps/site/.next",
-      "!apps/site/next-env.d.ts"
+      "!apps/site/next-env.d.ts",
+      "!apps/site/content/schema.json"
     ]
   },
   "formatter": {
@@ -49,6 +50,16 @@
         "rules": {
           "performance": {
             "noImgElement": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
           }
         }
       }
