@@ -9,13 +9,23 @@
       "type": "hero",
       "heading": "Domača kuhinja pod staro lipo",
       "subheading": "Sezonske jedi iz lokalnih sestavin, vrt v senci in nedeljska kosila za vso družino.",
-      "image": { "src": "/uploads/vrt.svg", "alt": "Vrt gostilne s klopmi pod veliko lipo" },
-      "cta": { "label": "Poglejte meni", "href": "/meni" }
+      "image": {
+        "src": "/uploads/vrt.svg",
+        "alt": "Vrt gostilne s klopmi pod veliko lipo"
+      },
+      "cta": {
+        "label": "Poglejte meni",
+        "href": "/meni"
+      }
     },
-    { "type": "notice", "text": "Jesenski meni je na voljo od 1. oktobra.", "tone": "info" },
+    {
+      "type": "notice",
+      "text": "Jesenski meni je na voljo od 1. oktobra.",
+      "tone": "info"
+    },
     {
       "type": "text",
-      "heading": "Kuhamo kot doma",
+      "heading": "Kuhamo pri nas doma",
       "body": "Že trideset let kuhamo po receptih naših babic. Zelenjavo dobimo od kmetov iz okolice, kruh pečemo sami vsako jutro."
     },
     {
@@ -27,7 +37,10 @@
           "description": "Juha, glavna jed s prilogami in sladica.",
           "priceCents": 1800
         },
-        { "name": "Zaključene družbe", "description": "Do 40 oseb v sobi ali na vrtu, meni po dogovoru." },
+        {
+          "name": "Zaključene družbe",
+          "description": "Do 40 oseb v sobi ali na vrtu, meni po dogovoru."
+        },
         {
           "name": "Malice med tednom",
           "description": "Od torka do petka med 11. in 14. uro.",
@@ -39,12 +52,27 @@
       "type": "gallery",
       "heading": "Pri nas",
       "images": [
-        { "src": "/uploads/vrt.svg", "alt": "Vrt pod lipo" },
-        { "src": "/uploads/soba.svg", "alt": "Lesena jedilnica s krušno pečjo" },
-        { "src": "/uploads/juha.svg", "alt": "Skleda bučne juhe" }
+        {
+          "src": "/uploads/vrt.svg",
+          "alt": "Vrt pod lipo"
+        },
+        {
+          "src": "/uploads/soba.svg",
+          "alt": "Lesena jedilnica s krušno pečjo"
+        },
+        {
+          "src": "/uploads/juha.svg",
+          "alt": "Skleda bučne juhe"
+        }
       ]
     },
-    { "type": "hours", "heading": "Delovni čas" },
-    { "type": "contact", "heading": "Kontakt" }
+    {
+      "type": "hours",
+      "heading": "Delovni čas"
+    },
+    {
+      "type": "contact",
+      "heading": "Kontakt"
+    }
   ]
 }
