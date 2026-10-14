@@ -55,7 +55,8 @@ Conversation with the owner in Slovenian; code and docs in English.
    D1 migration `0002_content.sql`).
 2. **GitHub token** (fine-grained): https://github.com/settings/personal-access-tokens/new → Resource owner
    `davidtacer` → Only select repositories: `inzenirji-widget` → Repository permissions: **Contents: Read and
-   write**, **Checks: Read-only** → Generate. Keep your own copy.
+   write** (Metadata: Read-only is added automatically) → Generate. Keep your own copy. Fine-grained tokens
+   have no "Checks" permission; the repo is public, so check runs are readable without it.
 3. **Worker secrets** (Cloudflare → Workers & Pages → `inzenirji-editor-dev` → Settings → Variables and Secrets,
    type Secret): `GITHUB_TOKEN` = token from step 2; `ANTHROPIC_API_KEY` = Anthropic API key.
 4. **D1 console** (`inzenirji-editor-dev`), with your e-mail:
