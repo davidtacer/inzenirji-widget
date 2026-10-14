@@ -17,7 +17,7 @@ The site template builds and deploys each branch (demo: `.github/workflows/site-
 | Method | GitHub calls | Notes |
 |---|---|---|
 | `read(branch)` | ref → `schema.json`, `site.json`, list + contents of `pages/` | pinned to the head SHA it read; missing/invalid schema → `SiteSchemaError` (route: `503 site_schema_invalid`) |
-| `commit(changes, msg, expectedHead)` | ref, commit, `POST git/trees` (inline content / `sha:null` delete), `POST git/commits`, `PATCH ref force:false` | only `site.json` and `pages/<slug>.json` (`isAllowedContentPath`); refuses if the branch moved since `read` |
+| `commit(changes, msg, expectedHead, uploads?)` | ref, commit, `POST git/trees` (inline content / `sha:null` delete), `POST git/commits`, `PATCH ref force:false` | only `site.json` and `pages/<slug>.json` (`isAllowedContentPath`) + images as `POST git/blobs` (base64) only as direct children of the schema's `uploads.dir` with editor-made names (`isAllowedUploadPath`); refuses if the branch moved since `read` |
 | `publish(msg)` | compare (content files only) → `POST merges` dev→main | no-op when no content file differs; commit message starts with `Objava urejevalnika: ` |
 | `undoLastPublish()` | head commit must start with the publish prefix → new commit on main with the parent's tree → merge main→dev | never reverts template/code commits or an undo |
 | `discardDraft()` | `PATCH dev ref` to main head (force) | drops unpublished changes |

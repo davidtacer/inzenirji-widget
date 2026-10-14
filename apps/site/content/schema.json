@@ -1,6 +1,10 @@
 {
   "version": 1,
-  "notes": "Gostilna Pri Lipi (demo).\n- Prices are integer euro cents in \"priceCents\" (6,50 € → 650).\n- Opening hours, phone, e-mail and address live in site.json; the \"hours\" and \"contact\" blocks only show them.\n- Images: reuse paths that already exist in the content (/uploads/...); new images cannot be uploaded yet.\n- Text on the website is Slovenian.",
+  "notes": "Gostilna Pri Lipi (demo).\n- Prices are integer euro cents in \"priceCents\" (6,50 € → 650).\n- Opening hours, phone, e-mail and address live in site.json; the \"hours\" and \"contact\" blocks only show them.\n- Images: existing paths in the content (/uploads/...) or images the owner attached in the chat.\n- Text on the website is Slovenian.",
+  "uploads": {
+    "dir": "apps/site/public/uploads",
+    "publicPath": "/uploads"
+  },
   "site": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -580,6 +584,80 @@
                     "required": [
                       "question",
                       "answer"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "heading",
+                "items"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "references"
+                },
+                "heading": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "intro": {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                "items": {
+                  "minItems": 1,
+                  "maxItems": 60,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120,
+                        "description": "Client or project name"
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 400
+                      },
+                      "image": {
+                        "type": "object",
+                        "properties": {
+                          "src": {
+                            "type": "string",
+                            "maxLength": 500,
+                            "pattern": "^(\\/uploads\\/(?!.*\\.\\.)[A-Za-z0-9._/-]+|https:\\/\\/\\S+)$"
+                          },
+                          "alt": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "src",
+                          "alt"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "href": {
+                        "description": "Link to the client's site or the project",
+                        "type": "string",
+                        "maxLength": 500,
+                        "pattern": "^(\\/(?!\\/)|#|mailto:|tel:|https:\\/\\/)"
+                      }
+                    },
+                    "required": [
+                      "name"
                     ],
                     "additionalProperties": false
                   }

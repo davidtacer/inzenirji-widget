@@ -31,6 +31,9 @@ Conversation with the owner in Slovenian; code and docs in English.
   deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
+- 2026-10-14: TASK-015 images in the chat + `references` block built (PR open). After merge: merge `dev` into
+  `demo/main`, then `demo/main` into `demo/dev` (new `schema.json` with `uploads` + references component);
+  until then the demo answers `uploads_not_supported` to images.
 - 2026-10-14 10:34: **GitHub App live on dev** — owner created `inzenirji-urejevalnik` (App ID 5312521), installed it
   on `inzenirji-widget`, set `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY`; his edit was committed as
   `inzenirji-urejevalnik[bot]` (demo/dev be16cb1). TASK-014 done.

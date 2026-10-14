@@ -7,6 +7,7 @@ import { costMicros, priceCents, sumUsage } from "../agent/pricing.ts";
 import { bearerToken } from "../auth/routes.ts";
 import { getSession, hitRateLimit } from "../auth/service.ts";
 import { type GitHubContentStore, GitHubError, type RepoConfig, SiteSchemaError } from "../content/github.ts";
+import { MAX_IMAGE_BYTES, MAX_IMAGES, type PreparedImage, prepareImage } from "../content/images.ts";
 import type { Db } from "../db.ts";
 
 export interface SiteRepoRow {
@@ -216,8 +217,22 @@ export function siteRoutes(deps: SiteRouteDeps) {
       c.json<ErrorResponse>({ error }, status);
     if (!deps.agent) return err("agent_unavailable", 503);
     let message: unknown;
+    // Attached images come as multipart/form-data ("message" + up to MAX_IMAGES "images"); plain edits as JSON.
+    const files: Array<{ name: string; bytes: Uint8Array }> = [];
     try {
-      message = ((await c.req.json()) as { message?: unknown }).message;
+      if ((c.req.header("content-type") ?? "").startsWith("multipart/form-data")) {
+        const form = await c.req.formData();
+        message = form.get("message");
+        const raw = form.getAll("images");
+        if (raw.length > MAX_IMAGES) return err("too_many_images", 400);
+        for (const f of raw) {
+          if (typeof f === "string") return err("invalid_request", 400);
+          if (f.size > MAX_IMAGE_BYTES) return err("image_too_large", 400);
+          files.push({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) });
+        }
+      } else {
+        message = ((await c.req.json()) as { message?: unknown }).message;
+      }
     } catch {
       return err("invalid_request", 400);
     }
@@ -236,6 +251,16 @@ export function siteRoutes(deps: SiteRouteDeps) {
     } catch (e) {
       return githubErrorResponse(c, e);
     }
+    const images: PreparedImage[] = [];
+    if (files.length) {
+      const uploads = snapshot.schema.uploads;
+      if (!uploads) return err("uploads_not_supported", 400);
+      for (const f of files) {
+        const checked = await prepareImage(f, uploads, deps.now());
+        if (!checked.ok) return err(checked.error, 400);
+        images.push(checked.image);
+      }
+    }
     const { results: history } = await deps.db
       .prepare(
         `SELECT request, reply, created_at AS at FROM change_log
@@ -248,7 +273,7 @@ export function siteRoutes(deps: SiteRouteDeps) {
     const { agent } = deps;
     let result: Awaited<ReturnType<typeof runEdit>>;
     try {
-      result = await runEdit({ snapshot, request, history }, agent.callModel, agent.model);
+      result = await runEdit({ snapshot, request, history, images }, agent.callModel, agent.model);
     } catch (e) {
       if (e instanceof ModelError) {
         console.error("[edit] model error:", e.status);
@@ -261,10 +286,24 @@ export function siteRoutes(deps: SiteRouteDeps) {
     const price = priceCents(cost, agent.margin);
     let commitSha: string | null = null;
     let conflict = false;
+    // Only images the new content actually uses are committed; unused uploads never reach the repo.
+    const used = images.filter((img) => result.changes.some((ch) => ch.content?.includes(img.url)));
     if (result.changes.length > 0) {
       try {
         const subject = request.split("\n")[0]?.slice(0, 72) ?? "sprememba";
-        commitSha = await ctx.store.commit(result.changes, `Urejevalnik: ${subject}`, snapshot.headSha);
+        const uploads =
+          used.length && snapshot.schema.uploads
+            ? {
+                dir: snapshot.schema.uploads.dir,
+                files: used.map((i) => ({ repoPath: i.repoPath, base64: i.base64 })),
+              }
+            : undefined;
+        commitSha = await ctx.store.commit(
+          result.changes,
+          `Urejevalnik: ${subject}`,
+          snapshot.headSha,
+          uploads,
+        );
       } catch (e) {
         if (e instanceof GitHubError && e.code === "conflict") conflict = true;
         else {
@@ -304,6 +343,7 @@ export function siteRoutes(deps: SiteRouteDeps) {
       changed: commitSha !== null,
       commitSha,
       files: result.changes.map((ch) => ch.path),
+      images: commitSha ? used.map((i) => i.url) : [],
       escalated: result.escalated,
       previewUrl: ctx.repo.previewUrl,
       costMicros: cost,

@@ -31,6 +31,7 @@ styles or the schema. So: the site can look like anything; what is editable is w
 {
   "version": 1,
   "notes": "Rules of this site for the editor, plain text, max 4000 chars",
+  "uploads": { "dir": "public/uploads", "publicPath": "/uploads" },
   "site": { "type": "object", "...": "JSON Schema (draft 2020-12) of site.json" },
   "page": { "type": "object", "...": "JSON Schema (draft 2020-12) of every pages/<slug>.json" }
 }
@@ -39,6 +40,10 @@ Rules the editor enforces (it refuses to edit a site whose schema breaks them):
 - `version` is `1`; `site` and `page` are JSON Schemas with `"type": "object"`.
 - The page schema has properties **`slug`** and **`title`** and lists both in `required`.
 - Whole file ≤ 200 000 bytes (it is sent to the AI model with every edit — smaller is cheaper and better).
+- `uploads` (optional, needed for images sent in the chat): `dir` = repo folder the site serves statically
+  (plain segments, no `..`, no hidden folders like `.github`), `publicPath` = URL path of that folder. Without it
+  the editor refuses attached images (`uploads_not_supported`). Image fields in the schema must accept
+  `<publicPath>/<file>` (demo: `/uploads/...`).
 
 How to write it well:
 - **Define the schema in code and generate the file** — never hand-edit `schema.json`. The demo defines zod
@@ -61,8 +66,10 @@ How to write it well:
 
 What the editor can then do: change any value the schema allows, add/remove/reorder blocks and list items,
 create pages from the blocks the page schema allows, delete pages (not `index`), change `site.json`
-(except `site.id` if present). What it cannot do (by design): new kinds of blocks, design or layout changes,
-new images (uploads come later). Those are developer work: add the component + schema, regenerate `schema.json`.
+(except `site.id` if present). What it cannot do (by design): new kinds of blocks, design or layout changes.
+Images: the owner attaches JPG/PNG/WebP in the chat (the widget shrinks them to ≤ 1600 px, max 3 per message);
+the AI sees them, writes the alt text and uses their URL; only images actually used in the content are committed
+to `uploads.dir` as `YYYY-MM-<name>-<hash8>.<ext>`. SVG and other formats are refused (checked by bytes). Those are developer work: add the component + schema, regenerate `schema.json`.
 
 ## 4. Branches and deploy (required)
 - Two branches: a **test** branch (demo `demo/dev`) and a **live** branch (demo `demo/main`). Each is built and

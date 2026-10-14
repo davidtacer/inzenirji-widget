@@ -20,6 +20,8 @@ export interface EditResult {
   /** Commit on the test branch with this change (null when nothing changed). */
   commitSha: string | null;
   files: string[];
+  /** URLs of attached images that were used (and committed). */
+  images?: string[];
   escalated: boolean;
   previewUrl: string;
   costMicros: number;
@@ -28,7 +30,8 @@ export interface EditResult {
 
 export interface SitesApi {
   status(): Promise<ApiResult<SiteStatus>>;
-  edit(message: string): Promise<ApiResult<EditResult>>;
+  /** Images are sent as multipart/form-data (already resized by the widget). */
+  edit(message: string, images?: Array<{ blob: Blob; name: string }>): Promise<ApiResult<EditResult>>;
   publish(): Promise<ApiResult<{ published: boolean; sha: string | null; liveUrl: string }>>;
   undo(): Promise<ApiResult<{ undone: boolean; sha: string; liveUrl: string }>>;
   discard(): Promise<ApiResult<{ discarded: boolean }>>;
@@ -48,9 +51,9 @@ export function createSitesApi(fetchImpl: FetchLike = (i, init) => fetch(i, init
           method,
           headers: {
             Authorization: `Bearer ${sessionToken}`,
-            ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+            ...(body === undefined || body instanceof FormData ? {} : { "Content-Type": "application/json" }),
           },
-          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+          ...(body === undefined ? {} : { body: body instanceof FormData ? body : JSON.stringify(body) }),
         });
       } catch {
         return { ok: false, status: 0, error: "network" } as const;
@@ -76,8 +79,17 @@ export function createSitesApi(fetchImpl: FetchLike = (i, init) => fetch(i, init
     return {
       status: () =>
         call<SiteStatus>("GET", "status", undefined, (v) => isObj(v) && typeof v.unpublished === "number"),
-      edit: (message) =>
-        call<EditResult>("POST", "edit", { message }, (v) => isObj(v) && typeof v.reply === "string"),
+      edit: (message, images = []) => {
+        let body: unknown = { message };
+        if (images.length) {
+          const form = new FormData();
+          form.set("message", message);
+          for (const img of images)
+            form.append("images", new File([img.blob], img.name, { type: img.blob.type || "image/jpeg" }));
+          body = form;
+        }
+        return call<EditResult>("POST", "edit", body, (v) => isObj(v) && typeof v.reply === "string");
+      },
       publish: () => call("POST", "publish", undefined, (v) => isObj(v) && typeof v.published === "boolean"),
       undo: () => call("POST", "undo", undefined, (v) => isObj(v) && v.undone === true),
       discard: () => call("POST", "discard", undefined, (v) => isObj(v) && v.discarded === true),

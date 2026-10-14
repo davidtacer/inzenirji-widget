@@ -16,6 +16,8 @@ export interface EditInput {
   request: string;
   /** Recent changes of this site, newest first (from change_log). */
   history: Array<{ request: string; reply: string; at: number }>;
+  /** Images the owner attached (TASK-015); the model sees them and may use their URLs in the content. */
+  images?: Array<{ url: string; mediaType: "image/jpeg" | "image/png" | "image/webp"; base64: string }>;
 }
 
 export interface EditResult {
@@ -112,7 +114,9 @@ Rules:
 - Change only what the owner asked for. Keep everything else exactly as it is (copy unchanged fields verbatim).
 - Read before you write: use read_page / read_site, then write the complete updated JSON.
 - Do not invent facts (phone numbers, addresses, prices, opening hours, names). If something needed is missing, ask.
-- Images: only reuse image paths or URLs that already exist in the content. You cannot upload or create images.
+- Images: use only image paths or URLs that already exist in the content, or the URLs of images the owner attached
+  to this message (given next to each image). Write a short, factual Slovenian alt text from what you see. You
+  cannot create or edit images. If the owner attached images but it is unclear where they belong, ask.
 - Page slugs (file names): lowercase letters, digits and hyphens; "index" is the home page; "uredi" is reserved.
 - New pages: build them only from what the page schema allows; add them to the site navigation if the site has one
   and the owner wants them in the menu.
@@ -171,12 +175,23 @@ export async function runEdit(input: EditInput, callModel: CallModel, model: str
         .map((h) => `- ${new Date(h.at).toISOString().slice(0, 10)}: "${h.request}" → ${h.reply}`)
         .join("\n")
     : "(no earlier changes)";
-  const messages: Message[] = [
-    {
-      role: "user",
-      content: `Recent changes on this site (newest first):\n${historyText}\n\nPages: ${Object.keys(pages).join(", ")}\n\nOwner's message:\n${input.request}`,
-    },
-  ];
+  const intro = `Recent changes on this site (newest first):\n${historyText}\n\nPages: ${Object.keys(pages).join(", ")}\n\nOwner's message:\n${input.request}`;
+  const images = input.images ?? [];
+  const firstContent: Message["content"] = images.length
+    ? [
+        { type: "text", text: intro },
+        ...images.flatMap((img, i): ContentBlock[] => [
+          { type: "text", text: `Attached image ${i + 1}, use it as: ${img.url}` },
+          { type: "image", source: { type: "base64", media_type: img.mediaType, data: img.base64 } },
+        ]),
+      ]
+    : intro;
+  // Images are sent again with every step of the tool loop; cache them after the first step.
+  if (Array.isArray(firstContent)) {
+    const last = firstContent[firstContent.length - 1] as ContentBlock & { cache_control?: unknown };
+    last.cache_control = { type: "ephemeral" };
+  }
+  const messages: Message[] = [{ role: "user", content: firstContent }];
 
   const runTool = (name: string, args: Record<string, unknown>): { text: string; isError?: boolean } => {
     switch (name) {

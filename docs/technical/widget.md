@@ -29,6 +29,10 @@ A Preact app rendered inside the embed iframe at `https://uredi.inzenirji.si/?si
   same for the live site (`sha` from the response vs `liveSha`/`liveBuild`). A status answer for an older commit
   never resolves the newest change (`applyStatus`); older changes resolve with the newer commit that contains
   them; discard marks waiting changes as discarded. Polls every 5 s while anything is deploying.
+- Images (TASK-015): image button in the composer (JPG/PNG/WebP/HEIC picker, max 3), `src/image-resize.ts`
+  shrinks to ≤ 1600 px JPEG q0.82 in the browser (small PNGs kept), thumbnails with remove, sent as multipart;
+  a message without text asks where the image should go. Browser check 2026-10-14: 4000×3000 4 MB photo →
+  1600×1200 375 KB upload.
 - `src/api.ts` — same-origin client; network failures become `status 0`; responses are zod-validated.
 - `src/session-store.ts` — session in the iframe's localStorage under `inzenirji:session:<siteId>`
   (partitioned per client site by the browser); expired or malformed entries are dropped; every call is

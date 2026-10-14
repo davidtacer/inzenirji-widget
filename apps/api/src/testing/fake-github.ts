@@ -13,6 +13,8 @@ export class FakeGitHub {
   trees = new Map<string, Tree>();
   commits = new Map<string, Commit>();
   refs = new Map<string, string>();
+  /** Binary blobs (stored as "base64:<data>" in trees). */
+  blobs = new Map<string, string>();
   /** "Deploy site" check run per commit sha (no entry → no run yet). */
   checkRuns = new Map<
     string,
@@ -124,13 +126,23 @@ export class FakeGitHub {
           })
         : this.json(404);
     }
+    if (method === "POST" && path === "/git/blobs") {
+      if (body.encoding !== "base64" || typeof body.content !== "string") return this.json(422);
+      const sha = this.id("b");
+      this.blobs.set(sha, `base64:${body.content}`);
+      return this.json(201, { sha });
+    }
     if (method === "POST" && path === "/git/trees") {
       const baseTree = this.trees.get(body.base_tree);
       if (!baseTree) return this.json(422);
       const next: Tree = { ...baseTree };
-      for (const e of body.tree as Array<{ path: string; content?: string; sha?: null }>) {
+      for (const e of body.tree as Array<{ path: string; content?: string; sha?: string | null }>) {
         if (e.sha === null) delete next[e.path];
-        else next[e.path] = e.content ?? "";
+        else if (typeof e.sha === "string") {
+          const blob = this.blobs.get(e.sha);
+          if (blob === undefined) return this.json(422, { message: "unknown blob" });
+          next[e.path] = blob;
+        } else next[e.path] = e.content ?? "";
       }
       return this.json(201, { sha: this.addTree(next) });
     }

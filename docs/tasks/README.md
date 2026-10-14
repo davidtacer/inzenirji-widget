@@ -17,3 +17,4 @@
 | TASK-012 | Chat shows deploy progress; "done" only when the site serves the change | 007 | Built — PR #12 |
 | TASK-013 | Per-site content schema (`schema.json` in the site repo), editor knows no block types | 012, ADR-013 | Done — Live, owner-tested (PR #13) |
 | TASK-014 | GitHub App for client repos (replaces the dev token) | 013 | Done — Live, owner-tested (PR #14) |
+| TASK-015 | Images from the chat + references block (demo) | 013, 014 | Built — PR open |
