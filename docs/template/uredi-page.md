@@ -22,7 +22,10 @@ Owner decision 2026-10-13.
    - no link to `/uredi` anywhere on the site (the owner opens it from the e-mail link or a bookmark).
 4. **Look:** no site header, navigation or footer, no cookie banner — the editor iframe covers the whole
    screen. Body without margin, background white, `viewport` meta set.
-5. **Other:** `<title>Urejevalnik</title>`, `lang="sl"`, no analytics or third-party scripts on this page
+5. **Tab icon:** `<link rel="icon" href="https://uredi.inzenirji.si/favicon.svg" type="image/svg+xml">` — the
+   editor's own icon "I_" (owner, 2026-10-15), served by the editor origin, so the owner can tell the editor tab
+   from the live site and a change reaches every site at once. On dev: `https://uredi-dev.inzenirji.si/favicon.svg`.
+6. **Other:** `<title>Urejevalnik</title>`, `lang="sl"`, no analytics or third-party scripts on this page
    (the login token is in the URL hash for a moment).
 
 ### Why both `noindex` and `Disallow`
@@ -40,6 +43,7 @@ the `noindex`.
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="https://uredi.inzenirji.si/favicon.svg" type="image/svg+xml" />
     <title>Urejevalnik</title>
     <style>html,body{margin:0;height:100%;background:#fff}</style>
   </head>
