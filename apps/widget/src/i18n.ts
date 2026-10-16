@@ -76,6 +76,14 @@ const sl = {
   errImageTooLarge: "Slika je prevelika.",
   errUploadsNotSupported: "Na tej strani dodajanje slik še ni mogoče.",
   imageHint: "Napišite še, kam naj gre slika (npr. »dodaj v galerijo«).",
+  credit: "Dobroimetje",
+  addCredit: "Dodaj dobroimetje",
+  creditVat: "Cene vključujejo DDV. Plačilo se odpre v novem zavihku.",
+  estimate: "Ocena spremembe",
+  errInsufficientCredit: "Dobroimetja je premalo za novo spremembo. Dodajte dobroimetje.",
+  errPayments: "Plačila trenutno ne delujejo. Poskusite kasneje.",
+  paymentOpened: "Plačilo se je odprlo v novem zavihku. Ko plačate, se dobroimetje tukaj osveži samo.",
+  popupBlocked: "Brskalnik je zavihek s plačilom blokiral. Dovolite pojavna okna in poskusite znova.",
 } as const;
 
 export type MessageKey = keyof typeof sl;
@@ -155,6 +163,14 @@ const en: Record<MessageKey, string> = {
   errImageTooLarge: "The image is too large.",
   errUploadsNotSupported: "Adding images is not available on this site yet.",
   imageHint: 'Also write where the image should go (e.g. "add to the gallery").',
+  credit: "Credit",
+  addCredit: "Add credit",
+  creditVat: "Prices include VAT. Payment opens in a new tab.",
+  estimate: "Estimated cost",
+  errInsufficientCredit: "Not enough credit for a new change. Please add credit.",
+  errPayments: "Payments do not work right now. Please try again later.",
+  paymentOpened: "Payment opened in a new tab. After paying, the credit here updates by itself.",
+  popupBlocked: "The browser blocked the payment tab. Allow pop-ups and try again.",
 };
 
 export const messages: Record<Lang, Record<MessageKey, string>> = { sl, en };

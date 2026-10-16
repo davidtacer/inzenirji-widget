@@ -6,6 +6,14 @@ import { type CallModel, ModelError } from "../agent/claude.ts";
 import { costMicros, priceCents, sumUsage } from "../agent/pricing.ts";
 import { bearerToken } from "../auth/routes.ts";
 import { getSession, hitRateLimit } from "../auth/service.ts";
+import {
+  balanceCents,
+  chargeEdit,
+  ensureStartingCredit,
+  estimateCents,
+  PACKAGES_CENTS,
+} from "../billing/credit.ts";
+import { createCheckoutSession, type StripeConfig, StripeError } from "../billing/stripe.ts";
 import { type GitHubContentStore, GitHubError, type RepoConfig, SiteSchemaError } from "../content/github.ts";
 import { MAX_IMAGE_BYTES, MAX_IMAGES, type PreparedImage, prepareImage } from "../content/images.ts";
 import type { Db } from "../db.ts";
@@ -27,14 +35,23 @@ export interface SiteRouteDeps {
   storeFor: (repo: RepoConfig) => GitHubContentStore | null;
   /** Editing agent; without it POST /edit answers 503 agent_unavailable (no API key). */
   agent?: AgentConfig;
+  /** Stripe top-ups (TASK-009); without it POST /checkout answers 503 payments_unavailable. */
+  payments?: PaymentsConfig;
+}
+
+export interface PaymentsConfig {
+  stripe: StripeConfig;
+  vatRate: number;
+  createCheckout?: typeof createCheckoutSession;
 }
 
 export interface AgentConfig {
   callModel: CallModel;
   model: string;
   usdToEur: number;
-  /** Client price = cost × margin, rounded up to the cent (margin to be decided after phase 1). */
+  /** Client price = cost × margin × (1 + VAT), rounded up to the cent (ADR-014: margin 3, VAT 22 %). */
   margin: number;
+  vatRate: number;
 }
 
 export const EDIT_LIMIT_PER_HOUR = 30;
@@ -66,12 +83,12 @@ export async function logChange(
     priceCents?: number;
     at: number;
   },
-): Promise<void> {
-  await db
+): Promise<number | null> {
+  const row = await db
     .prepare(
       `INSERT INTO change_log (site_id, email, kind, request, reply, commit_sha, model, input_tokens, output_tokens,
          cache_read_tokens, cache_write_tokens, cost_micros, price_cents, created_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14) RETURNING id`,
     )
     .bind(
       entry.siteId,
@@ -89,7 +106,8 @@ export async function logChange(
       entry.priceCents ?? 0,
       entry.at,
     )
-    .run();
+    .first<{ id: number }>();
+  return row?.id ?? null;
 }
 
 export type SiteContext = { session: SessionInfo; repo: SiteRepoRow; store: GitHubContentStore };
@@ -140,7 +158,16 @@ export function siteRoutes(deps: SiteRouteDeps) {
     if (ctx instanceof Response) return ctx;
     try {
       const s = await ctx.store.status();
+      const siteId = ctx.session.siteId;
+      await ensureStartingCredit(deps.db, siteId, deps.now());
+      const [balance, estimate] = await Promise.all([
+        balanceCents(deps.db, siteId),
+        estimateCents(deps.db, siteId),
+      ]);
       return c.json({
+        balanceCents: balance,
+        estimateCents: estimate,
+        packagesCents: deps.payments ? [...PACKAGES_CENTS] : [],
         unpublished: s.unpublished,
         previewSha: s.devSha,
         previewBuild: s.previewBuild,
@@ -210,10 +237,48 @@ export function siteRoutes(deps: SiteRouteDeps) {
     }
   });
 
+  app.post("/:siteId/checkout", async (c) => {
+    const ctx = await siteContext(c, deps);
+    if (ctx instanceof Response) return ctx;
+    const err = (error: string, status: 400 | 502 | 503) => c.json<ErrorResponse>({ error }, status);
+    if (!deps.payments) return err("payments_unavailable", 503);
+    let amount: unknown;
+    try {
+      amount = ((await c.req.json()) as { amountCents?: unknown }).amountCents;
+    } catch {
+      return err("invalid_request", 400);
+    }
+    if (!PACKAGES_CENTS.includes(amount as (typeof PACKAGES_CENTS)[number]))
+      return err("invalid_package", 400);
+    const site = await deps.db
+      .prepare("SELECT name FROM sites WHERE id = ?1")
+      .bind(ctx.session.siteId)
+      .first<{ name: string }>();
+    // The payment page opens in a new tab and comes back to a small page on the editor's own origin.
+    const back = `${new URL(c.req.url).origin}/placilo.html`;
+    try {
+      const session = await (deps.payments.createCheckout ?? createCheckoutSession)(deps.payments.stripe, {
+        siteId: ctx.session.siteId,
+        siteName: site?.name ?? ctx.session.siteId,
+        email: ctx.session.email,
+        amountCents: amount as number,
+        successUrl: `${back}?status=ok`,
+        cancelUrl: `${back}?status=cancel`,
+      });
+      return c.json({ url: session.url });
+    } catch (e) {
+      if (e instanceof StripeError) {
+        console.error("[checkout] stripe error:", e.status);
+        return err("payments_failed", 502);
+      }
+      throw e;
+    }
+  });
+
   app.post("/:siteId/edit", async (c) => {
     const ctx = await siteContext(c, deps);
     if (ctx instanceof Response) return ctx;
-    const err = (error: string, status: 400 | 409 | 429 | 502 | 503) =>
+    const err = (error: string, status: 400 | 402 | 409 | 429 | 502 | 503) =>
       c.json<ErrorResponse>({ error }, status);
     if (!deps.agent) return err("agent_unavailable", 503);
     let message: unknown;
@@ -244,6 +309,13 @@ export function siteRoutes(deps: SiteRouteDeps) {
     if (!(await hitRateLimit(deps.db, `edit-site:${siteId}`, EDIT_LIMIT_PER_HOUR, deps.now()))) {
       return err("rate_limited", 429);
     }
+    // Prepaid (ADR-014): start only when the credit covers the expected price of an edit.
+    await ensureStartingCredit(deps.db, siteId, deps.now());
+    const [balance, estimate] = await Promise.all([
+      balanceCents(deps.db, siteId),
+      estimateCents(deps.db, siteId),
+    ]);
+    if (balance < estimate) return err("insufficient_credit", 402);
 
     let snapshot: Awaited<ReturnType<GitHubContentStore["read"]>>;
     try {
@@ -283,7 +355,15 @@ export function siteRoutes(deps: SiteRouteDeps) {
     }
 
     const cost = costMicros(agent.model, result.usage, agent.usdToEur);
-    const price = priceCents(cost, agent.margin);
+    const price = priceCents(cost, agent.margin, agent.vatRate);
+    const charge = (changeId: number | null) =>
+      chargeEdit(deps.db, {
+        siteId,
+        email: ctx.session.email,
+        priceCents: price,
+        ref: changeId === null ? null : String(changeId),
+        now: deps.now(),
+      });
     let commitSha: string | null = null;
     let conflict = false;
     // Only images the new content actually uses are committed; unused uploads never reach the repo.
@@ -307,36 +387,40 @@ export function siteRoutes(deps: SiteRouteDeps) {
       } catch (e) {
         if (e instanceof GitHubError && e.code === "conflict") conflict = true;
         else {
-          await logChange(deps.db, {
-            siteId,
-            email: ctx.session.email,
-            kind: "edit",
-            request,
-            reply: result.reply,
-            model: agent.model,
-            usage: sumUsage(result.usage),
-            costMicros: cost,
-            priceCents: price,
-            at: deps.now(),
-          });
+          await charge(
+            await logChange(deps.db, {
+              siteId,
+              email: ctx.session.email,
+              kind: "edit",
+              request,
+              reply: result.reply,
+              model: agent.model,
+              usage: sumUsage(result.usage),
+              costMicros: cost,
+              priceCents: price,
+              at: deps.now(),
+            }),
+          );
           return githubErrorResponse(c, e);
         }
       }
     }
-    // Every processed request is logged with its cost, also when nothing was committed.
-    await logChange(deps.db, {
-      siteId,
-      email: ctx.session.email,
-      kind: "edit",
-      commitSha,
-      request,
-      reply: result.reply,
-      model: agent.model,
-      usage: sumUsage(result.usage),
-      costMicros: cost,
-      priceCents: price,
-      at: deps.now(),
-    });
+    // Every processed request is logged with its cost and charged, also when nothing was committed (ADR-014).
+    await charge(
+      await logChange(deps.db, {
+        siteId,
+        email: ctx.session.email,
+        kind: "edit",
+        commitSha,
+        request,
+        reply: result.reply,
+        model: agent.model,
+        usage: sumUsage(result.usage),
+        costMicros: cost,
+        priceCents: price,
+        at: deps.now(),
+      }),
+    );
     if (conflict) return err("conflict", 409);
     return c.json({
       reply: result.reply,
@@ -348,6 +432,7 @@ export function siteRoutes(deps: SiteRouteDeps) {
       previewUrl: ctx.repo.previewUrl,
       costMicros: cost,
       priceCents: price,
+      balanceCents: await balanceCents(deps.db, siteId),
     });
   });
 

@@ -101,6 +101,8 @@ function errorKey(res: { status: number; error: string }): MessageKey {
     return "errNotConnected";
   if (res.error === "conflict") return "errConflict";
   if (res.error === "nothing_to_undo") return "nothingToUndo";
+  if (res.error === "insufficient_credit") return "errInsufficientCredit";
+  if (res.error === "payments_unavailable" || res.error === "payments_failed") return "errPayments";
   if (res.error === "image_type") return "errImageType";
   if (res.error === "image_too_large") return "errImageTooLarge";
   if (res.error === "too_many_images") return "imagesMax";
@@ -119,6 +121,8 @@ export function Editor(props: {
   onSessionEnded: () => void;
   /** Resizes a picked image (injectable for tests; the browser one needs canvas). */
   prepareUpload?: PrepareUpload;
+  /** Opens a new tab (injectable for tests). */
+  openTab?: () => Window | null;
 }) {
   const { lang, api } = props;
   const [items, setItems] = useState<ChatItem[]>([]);
@@ -128,6 +132,7 @@ export function Editor(props: {
   const [confirm, setConfirm] = useState<Pending | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [topUp, setTopUp] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
@@ -157,6 +162,10 @@ export function Editor(props: {
 
   useEffect(() => {
     void refreshStatus();
+    // Coming back from the payment tab: show the new credit.
+    const onFocus = () => void refreshStatus();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   const deploying = items.some((i) => deployOf(i)?.phase === "deploying");
@@ -228,10 +237,13 @@ export function Editor(props: {
     setBusy(false);
     if (!res.ok) {
       failed(res);
+      if (res.error === "insufficient_credit") setTopUp(true);
       return;
     }
     const startedAt = Date.now();
     setNow(startedAt);
+    const balance = res.value.balanceCents;
+    if (typeof balance === "number") setStatus((s) => (s ? { ...s, balanceCents: balance } : s));
     add({
       from: "editor",
       text: res.value.reply,
@@ -245,6 +257,26 @@ export function Editor(props: {
     if (res.value.changed)
       setStatus((s) => (s ? { ...s, previewBuild: "pending", unpublished: Math.max(1, s.unpublished) } : s));
     void refreshStatus();
+  };
+
+  const buyCredit = async (amountCents: number) => {
+    // Open the tab inside the click (browsers block pop-ups opened after an await), then send it to Stripe.
+    const tab = (props.openTab ?? (() => window.open("", "_blank")))();
+    if (!tab) {
+      add({ from: "notice", key: "popupBlocked", tone: "error" });
+      return;
+    }
+    setBusy(true);
+    const res = await api.checkout(amountCents);
+    setBusy(false);
+    if (!res.ok) {
+      tab.close();
+      failed(res);
+      return;
+    }
+    tab.location.href = res.value.url;
+    setTopUp(false);
+    add({ from: "notice", key: "paymentOpened", tone: "info" });
   };
 
   const runAction = async (action: Pending) => {
@@ -317,6 +349,39 @@ export function Editor(props: {
             </button>
           </span>
         </div>
+        {status && (
+          <div class="status-row">
+            <span>
+              {t(lang, "credit")}:{" "}
+              <strong class={status.balanceCents < status.estimateCents ? "error" : ""}>
+                {formatCents(status.balanceCents)}
+              </strong>
+            </span>
+            {status.packagesCents.length > 0 && (
+              <button type="button" class="link" onClick={() => setTopUp((v) => !v)} aria-expanded={topUp}>
+                {t(lang, "addCredit")}
+              </button>
+            )}
+          </div>
+        )}
+        {status && topUp && status.packagesCents.length > 0 && (
+          <div class="topup">
+            <span class="actions">
+              {status.packagesCents.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  class="button"
+                  disabled={busy}
+                  onClick={() => void buyCredit(c)}
+                >
+                  {formatCents(c).replace(",00", "")}
+                </button>
+              ))}
+            </span>
+            <span class="muted small">{t(lang, "creditVat")}</span>
+          </div>
+        )}
         {status && (
           <div class="status-row">
             <span class="muted">
@@ -476,6 +541,12 @@ export function Editor(props: {
             {t(lang, "send")}
           </button>
         </div>
+        {status && (
+          <span class="muted small estimate">
+            {t(lang, "estimate")}: ~{formatCents(status.estimateCents)} · {t(lang, "credit")}{" "}
+            {formatCents(status.balanceCents)}
+          </span>
+        )}
       </form>
     </div>
   );

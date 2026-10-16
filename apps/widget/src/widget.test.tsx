@@ -32,6 +32,7 @@ describe("readParams", () => {
       siteId: "hisa-denk",
       parentOrigin: "https://hisa-denk.si",
       lang: "en",
+      mode: "editor",
     });
   });
 

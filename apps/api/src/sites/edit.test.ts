@@ -37,7 +37,9 @@ async function setup(opts: { model?: CallModel | null } = {}) {
       db: f.db,
       now: () => T0,
       storeFor: (repo) => createGitHubStore(repo, f.gh.token, f.gh.fetch),
-      ...(callModel ? { agent: { callModel, model: "claude-sonnet-5-5", usdToEur: 0.92, margin: 1 } } : {}),
+      ...(callModel
+        ? { agent: { callModel, model: "claude-sonnet-5-5", usdToEur: 0.92, margin: 1, vatRate: 0 } }
+        : {}),
     },
   });
   const edit = (body: unknown, token: string = f.session) =>
@@ -184,6 +186,7 @@ describe("POST /api/sites/:siteId/edit", () => {
       previewUrl: "https://demo-dev.inzenirji.si",
       costMicros: 55_200,
       priceCents: 6,
+      balanceCents: 194, // 2 € starting credit − 6 cents
     });
     const dev = t.gh.commits.get(t.gh.refs.get("demo/dev") as string);
     expect(dev?.message).toBe("Urejevalnik: Bučna juha naj stane 6,50 €");
