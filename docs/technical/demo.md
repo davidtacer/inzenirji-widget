@@ -1,4 +1,4 @@
-# Public editor demo (TASK-016, ADR-015) — Built
+# Public editor demo (TASK-016, ADR-015) — Live (dev editor)
 
 ## What the visitor sees
 `https://demo.inzenirji.si/uredi/demo`: the demo restaurant on the left (on phones: top half), the editor chat on
