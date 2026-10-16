@@ -427,7 +427,7 @@ export function Demo(props: DemoProps) {
             </div>
             <span class="muted small estimate">
               {T.ctaLead}{" "}
-              <a href={BOOKING_URL} target="_blank" rel="noopener">
+              <a class="cta-link" href={BOOKING_URL} target="_blank" rel="noopener">
                 {T.cta}
               </a>
             </span>
