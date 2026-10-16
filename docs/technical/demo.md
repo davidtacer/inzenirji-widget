@@ -4,7 +4,7 @@
 `https://demo.inzenirji.si/uredi/demo`: the demo restaurant on the left (on phones: top half), the editor chat on
 the right (bottom half). Suggestion chips, a counter "Spremembe: x od y", "Objavi v živo" (only explains, nothing
 goes live) and "Začni znova" (content back to the start; the counter stays). After 5 edits the chat asks for an
-e-mail (and optionally a website) for 10 more; after all 15 it shows the booking link (Calendly).
+e-mail (and optionally a website) for 10 more; after all 15 it shows the booking link (Google Calendar, same as inzenirji.si).
 
 ## How it works
 ```

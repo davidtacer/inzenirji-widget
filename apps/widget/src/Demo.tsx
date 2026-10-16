@@ -7,7 +7,8 @@ import { createDemoApi, type DemoApi, type DemoConfig, type DemoState, demoToken
  * of the demo site. Every result is sent to the demo page (parent), which renders it at once. Slovenian only.
  */
 
-export const BOOKING_URL = "https://calendly.com/hello-inzenirji/uvodni-klic-7-dnevni-sprint-inzenirji-si";
+/** Same booking page as inzenirji.si (Google Calendar appointment schedule). */
+export const BOOKING_URL = "https://calendar.app.google/Mti4dttj8z2eH5MAA";
 
 export const SUGGESTIONS = [
   "Dodaj na meni ričet s klobaso za 8,90 €",
