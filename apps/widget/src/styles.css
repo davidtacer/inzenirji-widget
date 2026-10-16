@@ -466,3 +466,15 @@ h2 {
 .cta p {
   margin: 0;
 }
+/* Links styled as buttons (booking link): text centred, no underline. */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  line-height: 1.2;
+}
+.cta-link {
+  color: var(--color-accent);
+}
