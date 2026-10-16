@@ -31,7 +31,7 @@ Conversation with the owner in Slovenian; code and docs in English.
   deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
-- 2026-10-16: **TASK-016 public editor demo built** (ADR-015): `https://demo.inzenirji.si/uredi/demo`, sandbox per
+- 2026-10-16: **TASK-016 public editor demo Live** (real Haiku edit verified in a browser; demo branches merged) (ADR-015): `https://demo.inzenirji.si/uredi/demo`, sandbox per
   visitor in D1, Haiku, 5 + 10 edits, e-mail lead to the CRM, Turnstile, 20 €/day cap. After merge to `dev`:
   merge `dev` into `demo/main`, then `demo/main` into `demo/dev` (the demo page is part of the site build).
   Owner: Turnstile keys + CRM token per `docs/runbooks/demo.md`. Latest numbers: TASK-016, ADR-015.
