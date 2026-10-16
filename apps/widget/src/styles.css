@@ -387,3 +387,82 @@ h2 {
     animation: none;
   }
 }
+
+/* Credit (TASK-009) */
+.small {
+  font-size: 0.8rem;
+}
+.topup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.estimate {
+  text-align: right;
+}
+
+/* Public demo (TASK-016) */
+.demo .header {
+  padding: 10px 12px;
+}
+.demo .header .actions {
+  flex-wrap: nowrap;
+}
+.demo .header .button {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.demo .chat {
+  min-height: 72px;
+}
+.chips {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: thin;
+}
+.chip {
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+.chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.captcha {
+  margin: 8px 0;
+}
+.demo-email {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.demo-email h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+.cta {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.cta p {
+  margin: 0;
+}

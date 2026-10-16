@@ -97,6 +97,9 @@ describe("status, publish, undo, discard", () => {
     const res = await t.call("GET", "demo/status");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
+      balanceCents: 200, // starting credit (ADR-014)
+      estimateCents: 20, // no edits yet → default
+      packagesCents: [], // payments not configured
       unpublished: 1,
       previewSha: devSha,
       previewBuild: "pending", // no run for the new commit yet

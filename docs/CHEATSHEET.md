@@ -18,6 +18,7 @@ Never values here — only names and where they live.
 |---|---|---|
 | dev | https://uredi-dev.inzenirji.si (health: `/api/health`) | Live (2026-10-13) |
 | prod | `uredi.inzenirji.si` | Planned |
+| demo (public) | https://demo.inzenirji.si/uredi/demo (editor demo, TASK-016) | Built |
 
 ## GitHub Actions secrets
 | Name | Used by | Status |
@@ -33,6 +34,8 @@ Never values here — only names and where they live.
 | `GITHUB_APP_ID` | GitHub App ID (TASK-014, `docs/runbooks/github-app.md`) | **to set** |
 | `GITHUB_APP_PRIVATE_KEY` | GitHub App private key (.pem contents) | **to set** |
 | `ANTHROPIC_API_KEY` | editing agent | **to set** (morning) |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | public demo bot check (TASK-016, `docs/runbooks/demo.md`) | **to set** |
+| `CRM_LEADS_TOKEN` | demo leads → CRM, CRM reads demo funnel (key from CRM → Nastavitve) | **to set** |
 
 ## D1
 | Env | Database | Console |
