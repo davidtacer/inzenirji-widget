@@ -1,6 +1,7 @@
 import { DEMO_CONTENT_TYPE, demoContentMessage } from "@inzenirji/shared/embed-protocol";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { createDemoApi, type DemoApi, type DemoConfig, type DemoState, demoTokenStore } from "./demo-api.ts";
+import { type PreparedUpload, type PrepareUpload, prepareUpload } from "./image-resize.ts";
 
 /**
  * Public editor demo (TASK-016, ADR-015): the same chat as the real editor, but it edits a private sandbox copy
@@ -55,10 +56,17 @@ const T = {
   unavailable: "Demo trenutno ne deluje. Poskusite kasneje.",
   captchaFailed: "Preverjanje ni uspelo. Osvežite stran in poskusite znova.",
   noChange: "Ni sprememb.",
+  attach: "Dodaj sliko",
+  removeImage: "Odstrani sliko",
+  imagesMax: "Največ 3 slike na sporočilo.",
+  imageRead: "Te slike ni bilo mogoče prebrati. Poskusite z drugo (JPG, PNG).",
+  imageHint: "Napišite še, kam naj gre slika, npr. »To sliko daj na naslovnico«.",
+  imageType: "Ta vrsta slike ni podprta. Uporabite JPG, PNG ali WebP.",
+  imageTooLarge: "Slika je prevelika.",
 } as const;
 
 type Item =
-  | { id: number; from: "you" | "editor"; text: string; changed?: boolean }
+  | { id: number; from: "you" | "editor"; text: string; changed?: boolean; previews?: string[] }
   | { id: number; from: "notice"; text: string; tone: "info" | "error" };
 
 type Phase = "starting" | "captcha" | "ready" | "failed";
@@ -104,7 +112,14 @@ export interface DemoProps {
   /** Sends a message to the demo page (injectable for tests). */
   post?: (message: unknown, origin: string) => void;
   tokens?: typeof demoTokenStore;
+  /** Resizes a picked image (injectable for tests; the browser one needs canvas). */
+  prepareUpload?: PrepareUpload;
 }
+
+/** Images per message (the API allows the same). */
+export const MAX_DEMO_IMAGES = 3;
+
+type Attachment = PreparedUpload & { id: number; preview: string };
 
 export function Demo(props: DemoProps) {
   const [api] = useState(() => props.api ?? createDemoApi());
@@ -120,6 +135,9 @@ export function Demo(props: DemoProps) {
   const [website, setWebsite] = useState("");
   const [emailError, setEmailError] = useState(false);
   const [done, setDone] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [preparing, setPreparing] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const token = useRef<string | null>(null);
   const nextId = useRef(1);
   const captchaRef = useRef<HTMLDivElement>(null);
@@ -216,16 +234,26 @@ export function Demo(props: DemoProps) {
 
   const send = async (text: string) => {
     const message = text.trim();
-    if (!message || busy || !token.current || phase !== "ready") return;
+    if (!message && attachments.length) {
+      notice(T.imageHint);
+      return;
+    }
+    if (!message || busy || preparing || !token.current || phase !== "ready") return;
     if (state && state.edits >= state.limit) {
       if (state.emailGiven) setDone(true);
       else setAskEmail(true);
       return;
     }
+    const sent = attachments;
     setDraft("");
-    add({ from: "you", text: message });
+    setAttachments([]);
+    add({ from: "you", text: message, ...(sent.length ? { previews: sent.map((a) => a.preview) } : {}) });
     setBusy(true);
-    const res = await api.edit(token.current, message);
+    const res = await api.edit(
+      token.current,
+      message,
+      sent.map(({ blob, name }) => ({ blob, name })),
+    );
     setBusy(false);
     if (res.ok) {
       add({ from: "editor", text: res.value.reply, changed: res.value.changed });
@@ -243,8 +271,39 @@ export function Demo(props: DemoProps) {
       startFresh(config);
     } else if (res.error === "demo_paused") notice(T.paused, "error");
     else if (res.status === 429) notice(T.rateLimited, "error");
+    else if (res.error === "image_type") notice(T.imageType, "error");
+    else if (res.error === "image_too_large") notice(T.imageTooLarge, "error");
+    else if (res.error === "too_many_images") notice(T.imagesMax, "error");
     else notice(res.status === 0 ? T.network : T.unavailable, "error");
   };
+
+  const pickImages = async (list: FileList | null) => {
+    const files = [...(list ?? [])];
+    if (fileRef.current) fileRef.current.value = "";
+    if (!files.length) return;
+    if (attachments.length + files.length > MAX_DEMO_IMAGES) {
+      notice(T.imagesMax, "error");
+      return;
+    }
+    setPreparing(true);
+    const prepare = props.prepareUpload ?? prepareUpload;
+    for (const file of files) {
+      try {
+        const up = await prepare(file);
+        setAttachments((a) => [...a, { ...up, id: nextId.current++, preview: URL.createObjectURL(up.blob) }]);
+      } catch {
+        notice(T.imageRead, "error");
+      }
+    }
+    setPreparing(false);
+  };
+
+  const removeAttachment = (id: number) =>
+    setAttachments((a) => {
+      const gone = a.find((x) => x.id === id);
+      if (gone) URL.revokeObjectURL(gone.preview);
+      return a.filter((x) => x.id !== id);
+    });
 
   const submitEmail = async (e: Event) => {
     e.preventDefault();
@@ -327,6 +386,13 @@ export function Demo(props: DemoProps) {
               ) : (
                 <div key={item.id} class={`bubble ${item.from}`}>
                   <span class="sender">{item.from === "you" ? T.you : T.editor}</span>
+                  {item.previews && (
+                    <div class="thumbs">
+                      {item.previews.map((src) => (
+                        <img key={src} src={src} alt="" />
+                      ))}
+                    </div>
+                  )}
                   <p>{item.text}</p>
                   {item.from === "editor" && item.changed === false && <span class="meta">{T.noChange}</span>}
                 </div>
@@ -398,7 +464,48 @@ export function Demo(props: DemoProps) {
               void send(draft);
             }}
           >
+            {(attachments.length > 0 || preparing) && (
+              <div class="attachments">
+                {attachments.map((a) => (
+                  <span class="attachment" key={a.id}>
+                    <img src={a.preview} alt="" />
+                    <button
+                      type="button"
+                      class="remove"
+                      aria-label={T.removeImage}
+                      onClick={() => removeAttachment(a.id)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {preparing && <span class="spinner" aria-hidden="true" />}
+              </div>
+            )}
             <div class="composer-row">
+              <input
+                ref={fileRef}
+                id="demo-image-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                multiple
+                class="visually-hidden"
+                onChange={(e) => void pickImages((e.target as HTMLInputElement).files)}
+                disabled={!ready || busy || askEmail || done || attachments.length >= MAX_DEMO_IMAGES}
+              />
+              <label
+                for="demo-image-input"
+                class={`button attach${!ready || busy || askEmail || done || attachments.length >= MAX_DEMO_IMAGES ? " disabled" : ""}`}
+                title={T.attach}
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"
+                  />
+                </svg>
+                <span class="visually-hidden">{T.attach}</span>
+              </label>
               <label for="demo-message" class="visually-hidden">
                 {T.placeholder}
               </label>
@@ -420,7 +527,7 @@ export function Demo(props: DemoProps) {
               <button
                 type="submit"
                 class="button primary"
-                disabled={!ready || busy || askEmail || done || !draft.trim()}
+                disabled={!ready || busy || preparing || askEmail || done || !draft.trim()}
               >
                 {T.send}
               </button>

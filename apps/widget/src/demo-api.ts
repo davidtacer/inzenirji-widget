@@ -26,12 +26,25 @@ export interface DemoApi {
   config(): Promise<ApiResult<DemoConfig>>;
   start(turnstileToken: string | null): Promise<ApiResult<DemoState & { token: string }>>;
   state(token: string): Promise<ApiResult<DemoState>>;
-  edit(token: string, message: string): Promise<ApiResult<DemoEditResult>>;
+  /** Images go as multipart/form-data (already resized by the widget). */
+  edit(
+    token: string,
+    message: string,
+    images?: Array<{ blob: Blob; name: string }>,
+  ): Promise<ApiResult<DemoEditResult>>;
   reset(token: string): Promise<ApiResult<DemoState>>;
   email(token: string, email: string, website: string): Promise<ApiResult<DemoState>>;
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
+function toForm(message: string, images: Array<{ blob: Blob; name: string }>): FormData {
+  const form = new FormData();
+  form.set("message", message);
+  for (const img of images)
+    form.append("images", new File([img.blob], img.name, { type: img.blob.type || "image/jpeg" }));
+  return form;
+}
 
 const isState = (v: unknown): v is DemoState => {
   const s = v as Partial<DemoState> | null;
@@ -59,10 +72,10 @@ export function createDemoApi(fetchImpl: FetchLike = (i, init) => fetch(i, init)
       res = await fetchImpl(`/api/demo/${path}`, {
         method,
         headers: {
-          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+          ...(body === undefined || body instanceof FormData ? {} : { "Content-Type": "application/json" }),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        ...(body === undefined ? {} : { body: body instanceof FormData ? body : JSON.stringify(body) }),
       });
     } catch {
       return { ok: false, status: 0, error: "network" };
@@ -92,12 +105,12 @@ export function createDemoApi(fetchImpl: FetchLike = (i, init) => fetch(i, init)
         (v) => isState(v) && typeof (v as { token?: unknown }).token === "string",
       ),
     state: (token) => call("GET", "state", token, undefined, isState),
-    edit: (token, message) =>
+    edit: (token, message, images = []) =>
       call(
         "POST",
         "edit",
         token,
-        { message },
+        images.length ? toForm(message, images) : { message },
         (v) => isState(v) && typeof (v as { reply?: unknown }).reply === "string",
       ),
     reset: (token) => call("POST", "reset", token, {}, isState),

@@ -132,6 +132,10 @@ export async function cleanup(db: Db, now: number): Promise<void> {
     .bind(now - KEEP_ROWS_MS)
     .run();
   await db
+    .prepare("DELETE FROM demo_images WHERE created_at <= ?1")
+    .bind(now - SANDBOX_TTL_MS)
+    .run();
+  await db
     .prepare("DELETE FROM demo_edits WHERE created_at < ?1")
     .bind(now - KEEP_ROWS_MS)
     .run();
@@ -171,4 +175,12 @@ export async function funnelStats(db: Db, since: number): Promise<FunnelStats> {
     edits: e?.edits ?? 0,
     costMicros: e?.cost ?? 0,
   };
+}
+
+/** D1 returns BLOBs as number arrays, node:sqlite as Uint8Array. */
+export function blobBytes(v: unknown): Uint8Array {
+  if (v instanceof Uint8Array) return v;
+  if (v instanceof ArrayBuffer) return new Uint8Array(v);
+  if (Array.isArray(v)) return Uint8Array.from(v as number[]);
+  return new Uint8Array();
 }

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CallModel, ModelRequest, ModelResponse } from "../agent/claude.ts";
 import { createApp } from "../app.ts";
 import { createGitHubStore } from "../content/github.ts";
-import { contentFixture, demoMenu, T0 } from "../testing/fixtures.ts";
+import { contentFixture, demoHome, demoMenu, JPEG, SVG, T0 } from "../testing/fixtures.ts";
 import { DEMO_RULES, type DemoConfig, STARTS_PER_IP_DAY_NO_CAPTCHA } from "./routes.ts";
 import { applyChanges, EMAIL_EDITS, FREE_EDITS, SANDBOX_TTL_MS, templateLoader } from "./sandbox.ts";
 
@@ -292,5 +292,75 @@ describe("applyChanges", () => {
     ]);
     expect(next).toEqual({ site: { name: "B" }, pages: { index: { a: 1 }, nova: { c: 1 } } });
     expect(content.pages.meni).toEqual({ b: 1 }); // input untouched
+  });
+});
+
+describe("demo images (TASK-016b)", () => {
+  /** Uses the first attached image as the hero image, or (useImage=false) only answers. */
+  const imageModel = (useImage = true): CallModel => {
+    let step = 0;
+    return async (req) => {
+      step++;
+      const first = req.messages[0]!.content;
+      const url = Array.isArray(first)
+        ? /use it as: (\S+)/.exec(first.map((b) => (b.type === "text" ? b.text : "")).join("\n"))?.[1]
+        : undefined;
+      if (useImage && step === 1 && url) {
+        const page = structuredClone(demoHome);
+        (page.blocks[0] as Record<string, unknown>).image = { src: url, alt: "Vrt" };
+        return {
+          content: [{ type: "tool_use", id: "w1", name: "write_page", input: { page } }],
+          stopReason: "tool_use",
+          usage,
+        };
+      }
+      return { content: [{ type: "text", text: "Urejeno." }], stopReason: "end_turn", usage };
+    };
+  };
+  const sendImages = (
+    app: { request: (u: string, i: RequestInit) => Response | Promise<Response> },
+    token: string,
+    files: Uint8Array[],
+  ) => {
+    const form = new FormData();
+    form.set("message", "Daj to sliko na naslovnico");
+    for (const [i, b] of files.entries()) form.append("images", new Blob([b]), `slika${i}.jpg`);
+    return app.request("https://uredi.test/api/demo/edit", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "CF-Connecting-IP": "1.2.3.4" },
+      body: form,
+    });
+  };
+
+  it("stores a used image, serves it while the sandbox lives, then not", async () => {
+    const t = await setup({ demo: { callModel: imageModel() } });
+    const { json } = await t.start();
+    const res = await sendImages(t.app, json.token, [JPEG]);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      content: { pages: Record<string, { blocks: Array<{ image?: { src: string } }> }> };
+    };
+    const src = body.content.pages.index!.blocks[0]!.image!.src;
+    expect(src).toMatch(/^https:\/\/uredi\.test\/api\/demo\/images\/[A-Za-z0-9_-]{22}\.jpg$/);
+    const img = await t.app.request(src);
+    expect(img.status).toBe(200);
+    expect(img.headers.get("content-type")).toBe("image/jpeg");
+    expect(new Uint8Array(await img.arrayBuffer())).toEqual(JPEG);
+    t.tick(SANDBOX_TTL_MS);
+    expect((await t.app.request(src)).status).toBe(404);
+    await t.start({}, "7.7.7.7"); // cleanup deletes the image row
+    expect(t.f.db.raw.prepare("SELECT COUNT(*) AS n FROM demo_images").get()).toEqual({ n: 0 });
+  });
+
+  it("does not keep images the content does not use, and refuses SVG and too many", async () => {
+    const t = await setup({ demo: { callModel: imageModel(false) } });
+    const { json } = await t.start();
+    expect((await sendImages(t.app, json.token, [JPEG])).status).toBe(200);
+    expect(t.f.db.raw.prepare("SELECT COUNT(*) AS n FROM demo_images").get()).toEqual({ n: 0 });
+    const svg = await sendImages(t.app, json.token, [SVG]);
+    expect(svg.status).toBe(400);
+    expect(await svg.json()).toEqual({ error: "image_type" });
+    expect((await sendImages(t.app, json.token, [JPEG, JPEG, JPEG, JPEG])).status).toBe(400);
+    expect((await t.app.request("https://uredi.test/api/demo/images/..%2Fx.jpg")).status).toBe(404);
   });
 });
