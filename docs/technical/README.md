@@ -11,3 +11,4 @@
 | `agent.md` | `apps/api/src/agent`, edit route in `apps/api/src/sites/routes.ts` | Live |
 | `billing.md` | `apps/api/src/billing`, `migrations/0003_credit.sql`, credit UI in the widget | Built |
 | `deploy.md` | `apps/api/wrangler.jsonc`, `apps/api/src/worker.ts`, `.github/workflows/deploy-dev.yml` | Live (dev) |
+| `demo.md` | `apps/api/src/demo`, `migrations/0004_demo.sql`, `apps/widget/src/Demo.tsx`, `demo-api.ts`, `apps/site/app/uredi/demo`, `components/DemoPreview.tsx`, `lib/demo.ts` | Built |

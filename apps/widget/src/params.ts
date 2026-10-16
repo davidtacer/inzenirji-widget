@@ -11,6 +11,8 @@ export interface WidgetParams {
    */
   parentOrigin: string | null;
   lang: Lang;
+  /** "demo" opens the public demo (TASK-016) instead of the editor. */
+  mode: "editor" | "demo";
 }
 
 export function readParams(search: string): WidgetParams {
@@ -21,5 +23,6 @@ export function readParams(search: string): WidgetParams {
     siteId: isValidSiteId(site) ? site : null,
     parentOrigin: isHttpOrigin(origin) ? origin : null,
     lang: pickLang(q.get("lang")),
+    mode: q.get("mode") === "demo" ? "demo" : "editor",
   };
 }

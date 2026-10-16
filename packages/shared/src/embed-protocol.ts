@@ -67,3 +67,24 @@ export function isHttpOrigin(value: unknown): value is string {
     return false;
   }
 }
+
+/**
+ * Public demo (TASK-016): the widget in `mode=demo` sends the visitor's sandbox content to the demo page, which
+ * renders it at once (no build). The page must validate `content` against the site schema before rendering it.
+ */
+export const DEMO_CONTENT_TYPE = "widget:demo-content";
+
+export interface DemoContentMessage {
+  v: typeof EMBED_PROTOCOL_VERSION;
+  type: typeof DEMO_CONTENT_TYPE;
+  content: { site: unknown; pages: Record<string, unknown> };
+  /** Page to show (the one the last change touched), if any. */
+  page: string | null;
+}
+
+export function demoContentMessage(
+  content: DemoContentMessage["content"],
+  page: string | null,
+): DemoContentMessage {
+  return { v: EMBED_PROTOCOL_VERSION, type: DEMO_CONTENT_TYPE, content, page };
+}

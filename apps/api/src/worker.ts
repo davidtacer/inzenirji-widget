@@ -4,6 +4,8 @@ import { configFromEnv, createApp } from "./app.ts";
 import { createGitHubStore, GitHubError, type RepoConfig, type TokenSource } from "./content/github.ts";
 import { createAppAuth, type GitHubAppAuth } from "./content/github-app.ts";
 import type { Db } from "./db.ts";
+import type { DemoConfig, DemoRouteDeps } from "./demo/routes.ts";
+import { templateLoader } from "./demo/sandbox.ts";
 import { consoleMailer, type Mailer, smtpMailer } from "./mailer.ts";
 
 /** Bindings, vars and secrets of the Worker (see wrangler.jsonc). */
@@ -44,6 +46,18 @@ export interface WorkerEnv {
   STRIPE_SECRET_KEY?: string;
   /** Secret: signing secret of the Stripe webhook endpoint (whsec_…). */
   STRIPE_WEBHOOK_SECRET?: string;
+  /** Public demo (TASK-016): site id whose live content is the demo template (default "demo"). */
+  DEMO_SITE?: string;
+  /** Model for demo edits (default claude-haiku-5-5). */
+  DEMO_MODEL?: string;
+  /** Daily AI cost cap of the demo in euros (default 20). */
+  DEMO_DAILY_CAP_EUR?: string;
+  /** Secrets: Cloudflare Turnstile widget keys for the demo (both or none). */
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
+  /** CRM lead endpoint for demo e-mails (var) and the token generated in the CRM (secret). */
+  CRM_LEADS_URL?: string;
+  CRM_LEADS_TOKEN?: string;
 }
 
 const DEFAULT_MODEL = "claude-sonnet-5-5";
@@ -72,6 +86,32 @@ export function paymentsFromEnv(env: WorkerEnv) {
   if (!secretKey || !webhookSecret || vatRate === null) return null;
   return { stripe: { secretKey, webhookSecret }, vatRate };
 }
+
+const DEMO_MODEL = "claude-haiku-5-5";
+
+/** Demo configuration; null without an Anthropic key or with an unknown model / bad cap. */
+export function demoFromEnv(env: WorkerEnv): Omit<DemoConfig, "fetchImpl"> | null {
+  const apiKey = env.ANTHROPIC_API_KEY?.trim();
+  const model = env.DEMO_MODEL?.trim() || DEMO_MODEL;
+  const usdToEur = Number(env.USD_TO_EUR ?? "0.92");
+  const capEur = Number(env.DEMO_DAILY_CAP_EUR ?? "20");
+  if (!apiKey || !isKnownModel(model) || !(usdToEur > 0) || !(capEur >= 0)) return null;
+  const siteKey = env.TURNSTILE_SITE_KEY?.trim();
+  const secretKey = env.TURNSTILE_SECRET_KEY?.trim();
+  const crmUrl = env.CRM_LEADS_URL?.trim();
+  const crmToken = env.CRM_LEADS_TOKEN?.trim();
+  return {
+    callModel: anthropicCaller(apiKey),
+    model,
+    usdToEur,
+    dailyCapMicros: Math.round(capEur * 1_000_000),
+    turnstile: siteKey && secretKey ? { siteKey, secretKey } : null,
+    crm: crmUrl && crmToken ? { url: crmUrl, token: crmToken } : null,
+  };
+}
+
+// The demo template is cached per isolate (sandbox.ts).
+let demoTemplate: { key: string; load: ReturnType<typeof templateLoader> } | null = null;
 
 // One app auth per isolate, so the key import, app JWT and installation tokens are reused across requests.
 let appAuth: { key: string; auth: GitHubAppAuth } | null = null;
@@ -162,6 +202,26 @@ export default {
           ...(payments ? { payments } : {}),
         }
       : undefined;
-    return createApp({ ...config, ...(auth ? { auth } : {}), ...(sites ? { sites } : {}) }).fetch(request);
+    const demoConfig = db && sites ? demoFromEnv(env) : null;
+    let demo: DemoRouteDeps | undefined;
+    if (db && sites && demoConfig && ctx) {
+      const siteId = env.DEMO_SITE?.trim() || "demo";
+      if (demoTemplate?.key !== siteId) {
+        demoTemplate = { key: siteId, load: templateLoader(db, sites.storeFor, siteId, () => Date.now()) };
+      }
+      demo = {
+        db,
+        now: () => Date.now(),
+        demo: demoConfig,
+        template: demoTemplate.load,
+        background: (work) => ctx.waitUntil(work),
+      };
+    }
+    return createApp({
+      ...config,
+      ...(auth ? { auth } : {}),
+      ...(sites ? { sites } : {}),
+      ...(demo ? { demo } : {}),
+    }).fetch(request);
   },
 };

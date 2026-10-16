@@ -18,6 +18,8 @@ export interface EditInput {
   history: Array<{ request: string; reply: string; at: number }>;
   /** Images the owner attached (TASK-015); the model sees them and may use their URLs in the content. */
   images?: Array<{ url: string; mediaType: "image/jpeg" | "image/png" | "image/webp"; base64: string }>;
+  /** Extra system rules, e.g. for the public demo sandbox (ADR-015). */
+  extraRules?: string;
 }
 
 export interface EditResult {
@@ -101,8 +103,8 @@ export const TOOLS: ToolDef[] = [
 const prompts = new Map<string, string>();
 
 /** System prompt for a site; the same text for every edit of a schema version, so it is cached by the API. */
-export function systemPrompt(siteName: string, schema: SiteSchema): string {
-  const key = `${siteName}\u0000${schema.text}`;
+export function systemPrompt(siteName: string, schema: SiteSchema, extraRules = ""): string {
+  const key = `${siteName}\u0000${schema.text}\u0000${extraRules}`;
   const hit = prompts.get(key);
   if (hit) return hit;
   const text = `You are the website editor for "${siteName}", a website built by Inženirji.si.
@@ -129,7 +131,7 @@ Rules:
 
 Rules of this site (from its developers):
 ${schema.notes.trim() || "(none)"}
-
+${extraRules ? `\n${extraRules.trim()}\n` : ""}
 Site schema (site.json):
 ${JSON.stringify(schema.site)}
 Page schema (pages/<slug>.json):
@@ -268,7 +270,7 @@ export async function runEdit(input: EditInput, callModel: CallModel, model: str
     return { reply, changes, usage, escalated, outcome };
   };
 
-  const system = systemPrompt(siteName, original.schema);
+  const system = systemPrompt(siteName, original.schema, input.extraRules);
   for (let step = 0; step < MAX_STEPS; step++) {
     const res = await callModel({
       model,
