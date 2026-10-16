@@ -2,6 +2,7 @@ import type { ErrorResponse, HealthResponse } from "@inzenirji/shared";
 import { Hono } from "hono";
 import { type AuthRouteDeps, authRoutes } from "./auth/routes.ts";
 import { stripeWebhookRoutes } from "./billing/webhook.ts";
+import { type DemoRouteDeps, demoRoutes } from "./demo/routes.ts";
 import { type SiteRouteDeps, siteRoutes } from "./sites/routes.ts";
 
 /** Runtime configuration, read from the Worker environment (worker.ts). */
@@ -15,6 +16,8 @@ export interface AppDeps extends ApiConfig {
   auth?: AuthRouteDeps;
   /** Content operations (status, publish, undo, discard, edit); without them /api/sites/* answers 503. */
   sites?: SiteRouteDeps;
+  /** Public editor demo (TASK-016); without it /api/demo/* answers 503. */
+  demo?: DemoRouteDeps;
 }
 
 export function createApp(deps: AppDeps) {
@@ -47,6 +50,12 @@ export function createApp(deps: AppDeps) {
     app.route("/sites", siteRoutes(deps.sites));
   } else {
     app.all("/sites/*", (c) => c.json<ErrorResponse>({ error: "sites_unavailable" }, 503));
+  }
+
+  if (deps.demo) {
+    app.route("/demo", demoRoutes(deps.demo));
+  } else {
+    app.all("/demo/*", (c) => c.json<ErrorResponse>({ error: "demo_unavailable" }, 503));
   }
 
   app.notFound((c) => c.json<ErrorResponse>({ error: "not_found" }, 404));

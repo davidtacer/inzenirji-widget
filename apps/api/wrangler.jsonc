@@ -1,7 +1,7 @@
 // Cloudflare Worker: widget (static assets) + API (/api/*) on one origin. ADR-009, ADR-010.
 // Only the `dev` environment is defined. Production is added by the owner's decision, never by CI on its own.
 // Secrets (never here): SMTP_PASSWORD, ANTHROPIC_API_KEY, STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (TASK-009), GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY (TASK-014; optional
-// fallback GITHUB_TOKEN) — Cloudflare dashboard → Worker →
+// fallback GITHUB_TOKEN), TURNSTILE_SITE_KEY + TURNSTILE_SECRET_KEY + CRM_LEADS_TOKEN (TASK-016) — Cloudflare dashboard → Worker →
 // Settings → Variables and Secrets.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -40,7 +40,11 @@
         "EDIT_MODEL": "claude-sonnet-5-5",
         "USD_TO_EUR": "0.92",
         "PRICE_MARGIN": "3",
-        "VAT_RATE": "0.22"
+        "VAT_RATE": "0.22",
+        "DEMO_SITE": "demo",
+        "DEMO_MODEL": "claude-haiku-5-5",
+        "DEMO_DAILY_CAP_EUR": "20",
+        "CRM_LEADS_URL": "https://crm.inzenirji.si/api/leads/demo"
       }
     }
   }

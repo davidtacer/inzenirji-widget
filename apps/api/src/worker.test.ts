@@ -1,6 +1,6 @@
 import { HealthResponse } from "@inzenirji/shared";
 import { describe, expect, it } from "vitest";
-import worker, { selectMailer } from "./worker.ts";
+import worker, { demoFromEnv, selectMailer } from "./worker.ts";
 
 describe("worker entry", () => {
   it("serves /api/health with the deployed GIT_SHA", async () => {
@@ -66,5 +66,36 @@ describe("worker without DB", () => {
       { waitUntil: () => {} },
     );
     expect(res.status).toBe(503);
+  });
+});
+
+describe("demoFromEnv (TASK-016)", () => {
+  it("needs an API key and uses Haiku, 20 € a day, no captcha or CRM by default", () => {
+    expect(demoFromEnv({})).toBeNull();
+    const d = demoFromEnv({ ANTHROPIC_API_KEY: "k" });
+    expect(d).toMatchObject({
+      model: "claude-haiku-5-5",
+      dailyCapMicros: 20_000_000,
+      turnstile: null,
+      crm: null,
+    });
+  });
+
+  it("enables Turnstile and the CRM only with both values", () => {
+    const base = { ANTHROPIC_API_KEY: "k", DEMO_DAILY_CAP_EUR: "5" };
+    expect(demoFromEnv({ ...base, TURNSTILE_SITE_KEY: "s" })?.turnstile).toBeNull();
+    const d = demoFromEnv({
+      ...base,
+      TURNSTILE_SITE_KEY: "s",
+      TURNSTILE_SECRET_KEY: "t",
+      CRM_LEADS_URL: "https://crm/x",
+      CRM_LEADS_TOKEN: "c",
+    });
+    expect(d).toMatchObject({
+      dailyCapMicros: 5_000_000,
+      turnstile: { siteKey: "s", secretKey: "t" },
+      crm: { url: "https://crm/x", token: "c" },
+    });
+    expect(demoFromEnv({ ...base, DEMO_MODEL: "gpt" })).toBeNull();
   });
 });

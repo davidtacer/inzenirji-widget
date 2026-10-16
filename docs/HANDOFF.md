@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-14 10:00 (Europe/Ljubljana)
+# Handoff — state as of 2026-10-16 (Europe/Ljubljana)
 
 ## Working mode
 Mode B (autonomous), standing permission 2026-10-13 — owner's words: "B – avtonomno" (agent commits on
@@ -31,6 +31,10 @@ Conversation with the owner in Slovenian; code and docs in English.
   deploy is the green "Deploy dev" run (its smoke step checks the exact SHA) plus the owner's check.
 
 ## Done
+- 2026-10-16: **TASK-016 public editor demo built** (ADR-015): `https://demo.inzenirji.si/uredi/demo`, sandbox per
+  visitor in D1, Haiku, 5 + 10 edits, e-mail lead to the CRM, Turnstile, 20 €/day cap. After merge to `dev`:
+  merge `dev` into `demo/main`, then `demo/main` into `demo/dev` (the demo page is part of the site build).
+  Owner: Turnstile keys + CRM token per `docs/runbooks/demo.md`. Latest numbers: TASK-016, ADR-015.
 - 2026-10-14 15:27: **Stripe test mode live on dev, owner-tested** (secrets set, webhook endpoint, test payment
   credited). TASK-009 done. Before live mode: accountant (invoices, VAT on prepayments, fiscal verification).
 - 2026-10-14 11:03: owner tested images live (hero image replaced via chat; committed by the app with the PNG).
@@ -99,6 +103,11 @@ Conversation with the owner in Slovenian; code and docs in English.
 
 ### Stripe (TASK-009) — test mode done; before live mode ask the accountant (invoices, VAT on prepayments,
 fiscal verification), then live keys + live webhook per `docs/runbooks/stripe.md`.
+
+### Public demo (TASK-016) — `docs/runbooks/demo.md`
+- Turnstile widget + Worker secrets `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`.
+- CRM → Nastavitve → Demo urejevalnika → key → Worker secret `CRM_LEADS_TOKEN`.
+- Real test: open the demo, make a change, leave an e-mail, see it in the CRM.
 
 ### Still open
 - Delete branch `docs/foundation` (contained in PR #1).
