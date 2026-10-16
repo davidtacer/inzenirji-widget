@@ -70,7 +70,16 @@ async function mount(api: DemoApi, tokens = memoryTokens()) {
   const post = vi.fn();
   act(() =>
     render(
-      <Demo parentOrigin="https://demo.inzenirji.si" api={api} post={post} tokens={tokens} />,
+      <Demo
+        parentOrigin="https://demo.inzenirji.si"
+        api={api}
+        post={post}
+        tokens={tokens}
+        prepareUpload={async (f: File) => ({
+          blob: new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: "image/jpeg" }),
+          name: f.name,
+        })}
+      />,
       container,
     ),
   );
@@ -111,7 +120,7 @@ describe("demo widget (TASK-016)", () => {
     const { post } = await mount(api);
     act(() => button(SUGGESTIONS[0]!)?.click());
     await flush();
-    expect(api.edit).toHaveBeenCalledWith("T".repeat(43), SUGGESTIONS[0]);
+    expect(api.edit).toHaveBeenCalledWith("T".repeat(43), SUGGESTIONS[0], []);
     expect(text()).toContain("Dodano.");
     expect(post).toHaveBeenLastCalledWith(
       expect.objectContaining({ page: "meni" }),
@@ -181,5 +190,32 @@ describe("demo widget (TASK-016)", () => {
     act(() => button(SUGGESTIONS[0]!)?.click());
     await flush();
     expect(text()).toContain(DEMO_TEXT.paused);
+  });
+
+  it("attaches an image and sends it with the message", async () => {
+    const api = fakeApi();
+    await mount(api);
+    const input = container.querySelector<HTMLInputElement>("#demo-image-input")!;
+    Object.defineProperty(input, "files", {
+      value: [new File(["x"], "vrt.png", { type: "image/png" })],
+      configurable: true,
+    });
+    act(() => {
+      input.dispatchEvent(new Event("change"));
+    });
+    await flush();
+    expect(container.querySelectorAll(".attachment").length).toBe(1);
+    const box = container.querySelector<HTMLTextAreaElement>("#demo-message")!;
+    act(() => {
+      box.value = "To sliko daj na naslovnico";
+      box.dispatchEvent(new Event("input"));
+    });
+    act(() => button("Pošlji")?.click());
+    await flush();
+    expect(api.edit).toHaveBeenCalledWith("T".repeat(43), "To sliko daj na naslovnico", [
+      { blob: expect.any(Blob), name: "vrt.png" },
+    ]);
+    expect(container.querySelectorAll(".attachment").length).toBe(0);
+    expect(container.querySelectorAll(".thumbs img").length).toBe(1);
   });
 });

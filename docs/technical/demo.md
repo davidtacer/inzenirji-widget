@@ -27,6 +27,8 @@ demo page (apps/site, static)          widget iframe ?mode=demo (apps/widget)   
 | `POST /start` `{turnstileToken}` | Turnstile if configured | new sandbox from the live demo content; per-IP limit; cleanup of expired rows; sends pending leads |
 | `GET /state` | sandbox token | content + counter (401 `sandbox_expired`) |
 | `POST /edit` `{message ≤ 500}` | sandbox token | limits → `runEdit` (Haiku, `DEMO_RULES`) → content updated, `demo_edits` row with cost; returns `pages` it changed |
+| `POST /edit` multipart `{message, images ≤ 3}` | sandbox token | same, with images (JPEG/PNG/WebP by bytes, ≤ 1.5 MB, widget resizes first); only images the new content uses are stored in `demo_images` |
+| `GET /images/<id>.<ext>` | — (unguessable id) | serves a stored image while its sandbox lives (`nosniff`, CSP `default-src 'none'`); deleted with the sandbox after 24 h |
 | `POST /reset` | sandbox token | content back to the template, counter unchanged |
 | `POST /email` `{email, website?}` | sandbox token | stores the lead once, +10 edits, sends pending leads to the CRM |
 | `GET /stats?days=30` | CRM token | funnel: visits, edited, emails, edits, cost |

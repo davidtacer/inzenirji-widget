@@ -17,8 +17,10 @@ export function createTestDb(): Db & { raw: DatabaseSync } {
     raw.exec(readFileSync(`${dir}${file}`, "utf8"));
   }
 
+  // D1 takes BLOBs as ArrayBuffer; node:sqlite wants a typed array.
+  const asSqlite = (v: unknown) => (v instanceof ArrayBuffer ? new Uint8Array(v) : v);
   const statement = (sql: string, values: unknown[]): DbStatement => ({
-    bind: (...next) => statement(sql, next),
+    bind: (...next) => statement(sql, next.map(asSqlite)),
     first: async <T>() => (raw.prepare(sql).get(...(values as SQLInputValue[])) as T | undefined) ?? null,
     all: async <T>() => ({ results: raw.prepare(sql).all(...(values as SQLInputValue[])) as T[] }),
     run: async () => raw.prepare(sql).run(...(values as SQLInputValue[])),
